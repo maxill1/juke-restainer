@@ -1,0 +1,20 @@
+{
+  "name": "juke-restainer",
+  "version": "1.0.0",
+  "description": "A simple service to search music file on a folder, NAS, etc and expose data (tag, file location, etc) over api",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Luca Mazzilli",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "express": "^4.17.1",
+    "find": "^0.2.9",
+    "lowdb": "^1.0.0",
+    "music-metadata": "^5.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^1.19.4"
+  }
+}
