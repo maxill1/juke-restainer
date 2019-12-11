@@ -1,36 +1,9 @@
 var controllers = require('./api/controllers');
 var library = require('./handlers/library')
-var config = require('./config.json')
+var config = require('./config-loader.js')
 express = require('express'),
   app = express(),
   bodyParser = require('body-parser');
-
-var parseArgs = function (key, cmdArgs) {
-  var data = {};
-  try {
-
-    var cmdArgs = process.argv.slice(2);
-    if (cmdArgs && cmdArgs.length > 0) {
-      for (let index = 0; index < cmdArgs.length; index++) {
-        const item = cmdArgs[index];
-        if (item === '-w' || item === '-d' || item === '-p' || item === '-t') {
-          data[item] = cmdArgs[index + 1];
-          console.error("Found arg " + item + " with value " + data[item]);
-        }
-      }
-    }
-  } catch (error) {
-    console.error("Error parsing arguments: ", error);
-  }
-  return data;
-}
-
-//updating web path
-var cmdArgs = parseArgs();
-config.webPath = cmdArgs['-w'] ? cmdArgs['-w'] : config.webPath;
-config.rootDir = cmdArgs['-d'] ? cmdArgs['-d'] : config.rootDir;
-config.port = cmdArgs['-p'] ? cmdArgs['-p'] : config.port;
-config.token = cmdArgs['-t'] ? cmdArgs['-t'] : config.token;
 
 console.log("Launching server... ");
 

@@ -1,4 +1,4 @@
-var config = require('../config.json')
+var config = require('../config-loader.js')
 const low = require('lowdb')
 const FileSync = require('lowdb/adapters/FileSync')
 var path = require('path')
