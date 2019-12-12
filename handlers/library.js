@@ -1,11 +1,11 @@
-var config = require('../config.json')
+var config = require('../config-loader.js')
 const low = require('lowdb')
 const FileSync = require('lowdb/adapters/FileSync')
 var path = require('path')
 const mm = require('music-metadata')
 var fs = require('fs')
 
-const adapter = new FileSync('db.json')
+const adapter = new FileSync(config.configPath+'db.json')
 const db = low(adapter)
 
 

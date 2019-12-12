@@ -18,5 +18,5 @@ node server -w http://192.168.1.12/MyWebServerHostingFiles -d '/data/MyWebServer
 # run docker image
 
 ```
-docker run --name juke-restainer -p 3000:3000 -v /host/Music:/Music maxill1/juke-restainer:latest 
+docker run --name juke-restainer -p 3000:3000 -v /host/Music:/music -v /hostConfigFilePath:/config maxill1/juke-restainer:latest 
 ```

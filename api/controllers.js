@@ -1,6 +1,5 @@
 'use strict';
 
-var config = require('../config.json');
 var library = require('../handlers/library');
 
 
