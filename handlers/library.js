@@ -100,10 +100,12 @@ function library(verbose) {
         db.defaults({ songs: [] }).write();
     }
 
-    self.update = function () {
+    self.update = function (clear) {
 
         //init db
-        self.clearDb();
+        if(clear){
+            self.clearDb();
+        }
         var audioFiles = walkSync(rootDir, []);
 
         return new Promise((resolve, reject) => {
@@ -131,7 +133,14 @@ function library(verbose) {
         return self.search(text, 'file', like);
     }
 
+    /**
+     * alias of title()
+     */
     self.song = function (text, like) {
+        return self.title(text, like);
+    }
+
+    self.title = function (text, like) {
         return self.search(text, 'title', like);
     }
 

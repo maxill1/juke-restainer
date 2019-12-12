@@ -69,6 +69,9 @@ app.use(checkAuth);
 app.use(clientErrorHandler)
 app.use(errorHandler)
 
+app.route('/search/:keyword')
+  .get(controllers.find);
+
 app.route('/file/:fileName')
   .get(controllers.find_filename);
 
@@ -76,6 +79,9 @@ app.route('/artist/:artist')
   .get(controllers.find_artist);
 
 app.route('/song/:song')
+  .get(controllers.find_song);
+
+app.route('/title/:song')
   .get(controllers.find_song);
 
 app.route('/album/:album')
