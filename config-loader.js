@@ -21,23 +21,27 @@ var parseArgs = function (key, cmdArgs) {
 
 var cmdArgs = parseArgs();
 
-var configPath = './config.json';
+
+var configFile = './config.json';
+var configPath = "./";
 if (cmdArgs['-c']) {
-    console.log("Found external config.json", cmdArgs['-c']);
-    configPath = cmdArgs['-c'] + '/config.json'
+    configPath = cmdArgs['-c']+"/";
+    console.log("Found external config.json", configPath);
+    configFile = configPath + 'config.json'
 }
 
 var config;
 try {
-    config = require(configPath)
+    config = require(configFile)
 } catch (error) {
     console.log("Fallback to default config.json");
-    configPath = './config.json';
-    config = require(configPath)
+    configFile = './config.json';
+    config = require(configFile)
 }
 
 console.log("Config:", config);
 
+config.configPath = configPath;
 config.webPath = cmdArgs['-w'] ? cmdArgs['-w'] : config.webPath;
 config.rootDir = cmdArgs['-d'] ? cmdArgs['-d'] : config.rootDir;
 config.port = cmdArgs['-p'] ? cmdArgs['-p'] : config.port;

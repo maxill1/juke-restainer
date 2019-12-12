@@ -5,7 +5,7 @@ var path = require('path')
 const mm = require('music-metadata')
 const util = require('util')
 
-const adapter = new FileSync('db.json')
+const adapter = new FileSync(config.configPath+'db.json')
 const db = low(adapter)
 
 
