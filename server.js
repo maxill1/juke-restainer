@@ -1,5 +1,5 @@
 var controllers = require('./api/controllers');
-var library = require('./handlers/library')
+var MusicLibrary = require('./handlers/library')
 var config = require('./config.json')
 express = require('express'),
   app = express(),
@@ -69,6 +69,9 @@ app.use(checkAuth);
 app.use(clientErrorHandler)
 app.use(errorHandler)
 
+app.route('/search/:keyword')
+  .get(controllers.find);
+
 app.route('/file/:fileName')
   .get(controllers.find_filename);
 
@@ -76,6 +79,9 @@ app.route('/artist/:artist')
   .get(controllers.find_artist);
 
 app.route('/song/:song')
+  .get(controllers.find_song);
+
+app.route('/title/:song')
   .get(controllers.find_song);
 
 app.route('/album/:album')
@@ -87,10 +93,22 @@ app.route('/library/update')
 app.route('/library')
   .get(controllers.all_library);
 
-//updating db
-console.log("Updating db...");
-new library().update().then(res => {
-  console.log(res);
+
+function start(app){
   app.listen(config.port, '0.0.0.0');
   console.log('Library API server started on: ' + config.port);
-});
+}
+
+//updating db
+const current = new MusicLibrary();
+var size = current.size();
+if(size === 0){
+  console.log("Updating library...");
+  current.update().then(res => {
+    console.log(res);
+    start(app);
+  });
+}else{
+  console.log("Library has "+size + " files");
+  start(app);
+}

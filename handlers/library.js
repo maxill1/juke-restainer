@@ -3,7 +3,7 @@ const low = require('lowdb')
 const FileSync = require('lowdb/adapters/FileSync')
 var path = require('path')
 const mm = require('music-metadata')
-const util = require('util')
+var fs = require('fs')
 
 const adapter = new FileSync('db.json')
 const db = low(adapter)
@@ -24,7 +24,6 @@ function library(verbose) {
 
     // List all files in a directory in Node.js recursively in a synchronous fashion
     var walkSync = function (dir, filelist) {
-        var fs = fs || require('fs'),
             files = fs.readdirSync(dir);
         filelist = filelist || [];
         files.forEach(function (file) {
@@ -46,10 +45,11 @@ function library(verbose) {
                 .write()
         }
 
-        var addToLibrary = function (data, file) {
+        var addToLibrary = function (data, file, fileSize) {
             log("Updating data for " + file, data);
             
             data.file = file;
+            data.fileSize = fileSize;
             data.url = file.replace(config.rootDir, config.webPath);
 
             var exists = db.get('songs').find({ file: file }).value();
@@ -75,11 +75,23 @@ function library(verbose) {
                     resolve("Found "+audioFiles.length + " files and parsed correctly "+songs.length+ " songs");// fulfilled
                 } else {
                     var file = audioFiles[index];
+
+                    //existing file and size, skip
+                    const stats = fs.statSync(file);
+                    const fileSize = stats.size;
+                    const existingFile = self.file(file, true);
+                    if(existingFile && existingFile.length > 0 && existingFile[0].fileSize == fileSize){
+                        log("Skipping unchanged " + file);
+                        return nextPromise(audioFiles, index).then(lastParsed=>{
+                            resolve(lastParsed);// fulfilled
+                        });
+                    }
+
                     return mm.parseFile(file)
                         .then(metadata => {
                             //remove unused data
                             metadata.common.picture = undefined;
-                            addToLibrary(metadata.common, file);
+                            addToLibrary(metadata.common, file, fileSize);
                             return nextPromise(audioFiles, index);
                         }).then(lastParsed=>{
                             resolve(lastParsed);// fulfilled
@@ -100,10 +112,12 @@ function library(verbose) {
         db.defaults({ songs: [] }).write();
     }
 
-    self.update = function () {
+    self.update = function (clear) {
 
         //init db
-        self.clearDb();
+        if(clear || self.size() === 0){
+            self.clearDb();
+        }
         var audioFiles = walkSync(rootDir, []);
 
         return new Promise((resolve, reject) => {
@@ -119,6 +133,10 @@ function library(verbose) {
         });
     }
 
+    self.size = function () {
+        return db.get('songs').size().value();
+    }
+
     self.all = function () {
         return db.get('songs').value();
     }
@@ -131,7 +149,14 @@ function library(verbose) {
         return self.search(text, 'file', like);
     }
 
+    /**
+     * alias of title()
+     */
     self.song = function (text, like) {
+        return self.title(text, like);
+    }
+
+    self.title = function (text, like) {
         return self.search(text, 'title', like);
     }
 
