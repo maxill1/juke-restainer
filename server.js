@@ -1,5 +1,5 @@
 var controllers = require('./api/controllers');
-var library = require('./handlers/library')
+var MusicLibrary = require('./handlers/library')
 var config = require('./config.json')
 express = require('express'),
   app = express(),
@@ -93,10 +93,22 @@ app.route('/library/update')
 app.route('/library')
   .get(controllers.all_library);
 
-//updating db
-console.log("Updating db...");
-new library().update().then(res => {
-  console.log(res);
+
+function start(app){
   app.listen(config.port, '0.0.0.0');
   console.log('Library API server started on: ' + config.port);
-});
+}
+
+//updating db
+const current = new MusicLibrary();
+var size = current.size();
+if(size === 0){
+  console.log("Updating library...");
+  current.update().then(res => {
+    console.log(res);
+    start(app);
+  });
+}else{
+  console.log("Library has "+size + " files");
+  start(app);
+}
