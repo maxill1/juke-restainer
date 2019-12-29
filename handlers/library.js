@@ -52,6 +52,27 @@ function library(verbose) {
             data.fileSize = fileSize;
             data.url = file.replace(config.rootDir, config.webPath);
 
+            //cache and remove album images
+            try {
+                if(data.album && data.picture && data.picture.length >0 && data.picture[0].data) {
+                    var exists = db.get('albumArt').find({ album: data.album }).value();
+                    var parent = path.dirname(file);
+                    var coverFile = parent+path.sep+data.album+".jpg";
+                    var pictureUrl = coverFile.replace(config.rootDir, config.webPath);
+                    var pictureData = {album: data.album, file: coverFile, url: pictureUrl};
+                    if (exists) {
+                        db.get('albumArt').find({ file: coverFile  }).assign(pictureData).write();
+                    } else {
+                        fs.writeFileSync(coverFile, data.picture[0].data);
+                        log("saved cover for album " + data.album +" to "+coverFile);
+                        db.get('albumArt').push(pictureData).write();
+                    }
+                }
+            } catch (error) {
+                console.error("Album art not cached for "+file);
+            }
+            data.picture = undefined;
+
             var exists = db.get('songs').find({ file: file }).value();
             if (exists) {
                 //log("file exists ", exists)
@@ -84,21 +105,26 @@ function library(verbose) {
                         log("Skipping unchanged " + file);
                         return nextPromise(audioFiles, index).then(lastParsed=>{
                             resolve(lastParsed);// fulfilled
+                        }, err=>{
+                            reject(err);// error
                         });
                     }
 
                     return mm.parseFile(file)
                         .then(metadata => {
-                            //remove unused data
-                            metadata.common.picture = undefined;
                             addToLibrary(metadata.common, file, fileSize);
+                            return nextPromise(audioFiles, index);
+                        }, err=>{
+                            removeFromLibrary(file);
+                            console.error(err.message);
                             return nextPromise(audioFiles, index);
                         }).then(lastParsed=>{
                             resolve(lastParsed);// fulfilled
-                        })
-                        .catch(err => {
+                        }, err=>{
+                            reject(err);// error
+                        }).catch(err => {
                             removeFromLibrary(file);
-                            error(err.message);
+                            console.error(err.message);
                             return nextPromise(audioFiles, index);
                         });
                 }
@@ -109,7 +135,7 @@ function library(verbose) {
     }
 
     self.clearDb = function(){
-        db.defaults({ songs: [] }).write();
+        db.defaults({ songs: [], albumArt: [] }).write();
     }
 
     self.update = function (clear) {
@@ -215,6 +241,25 @@ function library(verbose) {
 
             //var result = db.get('songs').find(searchExpr).value(); //Only one
             var result = db.get('songs').filter(getSearchExpr(text, properties, exactMatch)).value();
+            if(type === 'all' && result.length === 0){
+                //if no results we will try with file name
+                db.get('songs').filter(getSearchExpr(text, ['file'], exactMatch)).value();
+            }else{
+                //add album art url
+                try {
+                    for (let index = 0; index < result.length; index++) {
+                        const item = result[index];
+                        var albumArt = db.get('albumArt').find({ album: item.album }).value();
+                        if(albumArt){
+                            item.albumArtUrl = albumArt.url;
+                        }
+                    }
+                } catch (error) {
+                    console.error("cannot check albumArt for '"+item.album+"'" );
+                }
+
+            }
+
             return result;
         } catch (error) {
             console.log("Error searching "+text, error);
