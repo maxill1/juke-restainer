@@ -1,6 +1,9 @@
 # juke-restainer
 a simple api to access your ID3 tagged music library. Useful to search specific song, author or album and submit the generated url to a music renderer (Home Assistant media_player entities, Google Cast via node-red-contrib-cast, mdp, etc)
 
+<a href="https://www.buymeacoffee.com/maxill1" target="_blank">
+<img src="https://www.buymeacoffee.com/assets/img/guidelines/download-assets-sm-2.svg" alt="Buy Me A Coffee"></a>
+
 ## running with nodejs
 go to the folder containing the project, install the dependencies, edit your config.json and launch the server.
 
