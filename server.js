@@ -1,14 +1,12 @@
-var controllers = require('./api/controllers');
-var MusicLibrary = require('./handlers/library')
 var config = require('./config-loader.js')
-express = require('express'),
-  app = express(),
-  bodyParser = require('body-parser');
+var express = require('express');
+var app = express();
+var bodyParser = require('body-parser');
+var MusicLibrary = require('./handlers/library')
 
 process.on('uncaughtException', function (exception) {
   console.log(exception); 
 });
-
   
 console.log("Launching server... ");
 
@@ -47,6 +45,104 @@ app.use(checkAuth);
 app.use(clientErrorHandler)
 app.use(errorHandler)
 
+
+
+var controllers = {};
+
+const library = new MusicLibrary();
+
+controllers.find_filename = function (req, res) {
+  var keyword = req.params.fileName;
+  console.log("Searching fileName " + keyword);
+  try {
+    var data = library.file(keyword);
+    console.log("Results for fileName " + keyword, data);
+    res.json(data);
+  } catch (e) {
+    res.send(e);
+  }
+};
+
+controllers.update_library = function (req, res) {
+  console.log("Updating library");
+  try {
+    var handler = library;
+    handler.update().then(function (results) {
+      console.log("SEARCH: " + results);
+
+      res.json(results);
+    }, function (error) {
+      res.send(e);
+    });
+
+  } catch (e) {
+    res.send(e);
+  }
+};
+
+controllers.all_library = function (req, res) {
+  console.log("Requested full library");
+  try {
+    var data = library.all();
+    res.json(data);
+  } catch (e) {
+    res.send(e);
+  }
+};
+
+
+controllers.find = function (req, res) {
+  var keyword = req.params.keyword;
+  console.log("Searching in all fields " + keyword);
+
+  try {
+    var data = library.searchAll(keyword);
+    console.log("Results for all fields " + keyword, data);
+    res.json(data);
+  } catch (e) {
+    res.send(e);
+  }
+};
+
+controllers.find_song = function (req, res) {
+  var song = req.params.song;
+  console.log("Searching song " + song);
+
+  try {
+    var data = library.song(song);
+    console.log("Results for song " + song, data);
+    res.json(data);
+  } catch (e) {
+    res.send(e);
+  }
+};
+
+controllers.find_artist = function (req, res) {
+  var artist = req.params.artist;
+  console.log("Searching artist " + artist);
+
+  try {
+    var data = library.song(artist);
+    console.log("Results for artist " + artist, data);
+    res.json(data);
+  } catch (e) {
+    res.send(e);
+  }
+};
+
+controllers.find_album = function (req, res) {
+  var album = req.params.album;
+  console.log("Searching album " + album);
+
+  try {
+    var data = library.song(album);
+    console.log("Results for album " + album, data);
+    res.json(data);
+  } catch (e) {
+    res.send(e);
+  }
+};
+
 app.route('/search/:keyword')
   .get(controllers.find);
 
@@ -78,14 +174,18 @@ function start(app){
 }
 
 //updating db
-const current = new MusicLibrary();
+const current = library;
 var size = current.size();
 if(size === 0){
   console.log("Updating library...");
-  current.update().then(res => {
+
+  current.on('done', (index) => {
+    console.log("Library updated.");
     console.log(res);
     start(app);
   });
+
+  current.update();
 }else{
   console.log("Library has "+size + " files");
   start(app);

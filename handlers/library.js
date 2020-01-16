@@ -4,15 +4,20 @@ const FileSync = require('lowdb/adapters/FileSync')
 var path = require('path')
 const mm = require('music-metadata')
 var fs = require('fs')
+const EventEmitter = require('events');
+class MyEmitter extends EventEmitter {}
 
 const adapter = new FileSync(config.configPath+'db.json')
-const db = low(adapter)
-
+const db = low(adapter);
 
 function library(verbose) {
-    var self = this;
 
+    var self = this;
     var rootDir = config.rootDir;
+
+    const myEmitter = new MyEmitter();
+    this.on =  myEmitter.on;
+    this.emit = myEmitter.emit;
 
     var log = function(text, data){
         if(verbose){
@@ -21,6 +26,42 @@ function library(verbose) {
             console.log(text)
         }
     }
+
+    //worker
+    myEmitter.on('updateLibrary', (audioFiles, index) => {
+
+        var file = audioFiles[index];
+        if (!audioFiles || audioFiles.length <= index) {
+            //done
+            myEmitter.emit('done');
+        return "Found "+audioFiles.length + " files and parsed correctly "+db.get('songs').value().length+ " songs";
+        } else {
+            var file = audioFiles[index];
+
+            //existing file and size, skip
+            const stats = fs.statSync(file);
+            const fileSize = stats.size;
+            const existingFile = self.file(file, true);
+            if(existingFile && existingFile.length > 0 && existingFile[0].fileSize == fileSize){
+                log(index + " - skipping unchanged " + file);
+                myEmitter.emit('updateLibrary', audioFiles, index+1);
+                return;
+            }
+
+            mm.parseFile(file).then(metadata => {
+                addToLibrary(metadata.common, file, fileSize, index);
+                myEmitter.emit('updateLibrary', audioFiles, index+1);
+            }, err=>{
+                removeFromLibrary(file, index);
+                console.error(err.message);
+                myEmitter.emit('updateLibrary', audioFiles, index+1);
+            }).catch(err => {
+                console.error(index + " - catched exception " +err.message);
+                removeFromLibrary(file, index);
+                myEmitter.emit('updateLibrary', audioFiles, index+1);
+            });
+        }
+    });
 
     // List all files in a directory in Node.js recursively in a synchronous fashion
     var walkSync = function (dir, filelist) {
@@ -36,127 +77,95 @@ function library(verbose) {
         return filelist;
     };
 
-    var parseTag = function (audioFiles, index) {
+    self.update = function (clear) {
+        try {
 
-        var removeFromLibrary = function (file) {
-            log("Removing data for " + file);
-            db.get('songs')
-                .remove({ file: file })
-                .write()
-        }
+            var removeFromLibrary = function (file, index) {
+                log(index + " - removing data for " + file);
+                db.get('songs').remove({ file: file }).write()
+            }
 
-        var addToLibrary = function (data, file, fileSize) {
-            log("Updating data for " + file, data);
-            
-            data.file = file;
-            data.fileSize = fileSize;
-            data.url = file.replace(config.rootDir, config.webPath);
+            var addToLibrary = function (data, file, fileSize, index) {
+                log(index+" - updating data for " + file, data);
+                
+                data.file = file;
+                data.fileSize = fileSize;
+                data.url = file.replace(config.rootDir, config.webPath);
 
-            //cache and remove album images
-            try {
-                if(data.album && data.picture && data.picture.length >0 && data.picture[0].data) {
-                    var exists = db.get('albumArt').find({ album: data.album }).value();
-                    var parent = path.dirname(file);
-                    var coverFile = parent+path.sep+data.album+".jpg";
-                    var pictureUrl = coverFile.replace(config.rootDir, config.webPath);
-                    var pictureData = {album: data.album, file: coverFile, url: pictureUrl};
-                    if (exists) {
-                        db.get('albumArt').find({ file: coverFile  }).assign(pictureData).write();
-                    } else {
-                        fs.writeFileSync(coverFile, data.picture[0].data);
-                        log("saved cover for album " + data.album +" to "+coverFile);
-                        db.get('albumArt').push(pictureData).write();
+                //cache and remove album images
+                try {
+                    if(data.album && data.picture && data.picture.length >0 && data.picture[0].data) {
+                        var exists = db.get('albumArt').find({ album: data.album }).value();
+                        var parent = path.dirname(file);
+                        var coverFile = parent+path.sep+data.album+".jpg";
+                        var pictureUrl = coverFile.replace(config.rootDir, config.webPath);
+                        var pictureData = {album: data.album, file: coverFile, url: pictureUrl};
+                        if (exists) {
+                            db.get('albumArt').find({ file: coverFile  }).assign(pictureData).write();
+                        } else {
+                            fs.writeFileSync(coverFile, data.picture[0].data);
+                            log("saved cover for album " + data.album +" to "+coverFile);
+                            db.get('albumArt').push(pictureData).write();
+                        }
                     }
+                } catch (error) {
+                    console.error(index+" - album art not cached for "+file);
                 }
-            } catch (error) {
-                console.error("Album art not cached for "+file);
-            }
-            data.picture = undefined;
+                data.picture = undefined;
 
-            var exists = db.get('songs').find({ file: file }).value();
-            if (exists) {
-                //log("file exists ", exists)
-                db.get('songs').find({ file: file }).assign(data).write();
-            } else {
-                log("added file " + file);
-                db.get('songs').push(data).write();
-            }
-        }
-        
-        var nextPromise = function (audioFiles, index) {
-            var next = index + 1;
-            return parseTag(audioFiles, next);
-        }
-
-        return new Promise((resolve, reject) => {
-            try {
-                var file = audioFiles[index];
-                if (!audioFiles || audioFiles.length <= index) {
-                    var songs = db.get('songs').value();
-                    resolve("Found "+audioFiles.length + " files and parsed correctly "+songs.length+ " songs");// fulfilled
+                var songs = db.get('songs');
+                var exists = songs.find({ file: file }).value();
+                if (exists) {
+                    //log("file exists ", exists)
+                    songs.find({ file: file }).assign(data).write();
                 } else {
-                    var file = audioFiles[index];
-
-                    //existing file and size, skip
-                    const stats = fs.statSync(file);
-                    const fileSize = stats.size;
-                    const existingFile = self.file(file, true);
-                    if(existingFile && existingFile.length > 0 && existingFile[0].fileSize == fileSize){
-                        log("Skipping unchanged " + file);
-                        return nextPromise(audioFiles, index).then(lastParsed=>{
-                            resolve(lastParsed);// fulfilled
-                        }, err=>{
-                            reject(err);// error
-                        });
-                    }
-
-                    return mm.parseFile(file)
-                        .then(metadata => {
-                            addToLibrary(metadata.common, file, fileSize);
-                            return nextPromise(audioFiles, index);
-                        }, err=>{
-                            removeFromLibrary(file);
-                            console.error(err.message);
-                            return nextPromise(audioFiles, index);
-                        }).then(lastParsed=>{
-                            resolve(lastParsed);// fulfilled
-                        }, err=>{
-                            reject(err);// error
-                        }).catch(err => {
-                            removeFromLibrary(file);
-                            console.error(err.message);
-                            return nextPromise(audioFiles, index);
-                        });
+                    log(index+" - added file " + file);
+                    songs.push(data).write();
                 }
-            } catch (error) {
-                reject(error); // rejected
             }
-        });
+
+            //init db
+            if(clear || self.size() === 0){
+                self.clearDb();
+            }
+            var audioFiles = walkSync(rootDir, []);
+
+            //myEmitter.emit('updateLibrary', audioFiles, 0);
+
+            Object.defineProperty(Array.prototype, 'chunk_inefficient', {
+                value: function(chunkSize) {
+                  var array = this;
+                  return [].concat.apply([],
+                    array.map(function(elem, i) {
+                      return i % chunkSize ? [] : [array.slice(i, i + chunkSize)];
+                    })
+                  );
+                }
+              });
+              
+            var chunks = audioFiles.chunk_inefficient(500);
+            for (let index = 0; index < chunks.length; index++) {
+                const c = chunks[index];
+                myEmitter.emit('updateLibrary', c, 0);
+
+                console.log("Chunck "+index+"/"+chunks.length+" done...");
+                let time = new Date().getTime();
+                while (time+5000 > new Date().getTime()) {
+                    continue;
+                }
+                //db.saveSync(config.configPath+'db.json');
+                console.log("Resuming...");
+            }
+            
+            return "Update requested";
+                
+        } catch (error) {
+            console.error("catched exception " +error);
+        }
     }
 
     self.clearDb = function(){
         db.defaults({ songs: [], albumArt: [] }).write();
-    }
-
-    self.update = function (clear) {
-
-        //init db
-        if(clear || self.size() === 0){
-            self.clearDb();
-        }
-        var audioFiles = walkSync(rootDir, []);
-
-        return new Promise((resolve, reject) => {
-            try {
-                return parseTag(audioFiles, 0).then(function (result) {
-                    resolve(result);
-                }, function (error) {
-                    throw error;
-                });
-            } catch (error) {
-                reject(error); // rejected
-            }
-        });
     }
 
     self.size = function () {
