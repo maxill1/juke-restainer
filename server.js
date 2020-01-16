@@ -5,6 +5,11 @@ express = require('express'),
   app = express(),
   bodyParser = require('body-parser');
 
+process.on('uncaughtException', function (exception) {
+  console.log(exception); 
+});
+
+  
 console.log("Launching server... ");
 
 function logErrors(err, req, res, next) {
