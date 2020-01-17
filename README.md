@@ -68,3 +68,7 @@ returns the complete json library
 ## http://<ip>:3000/library/update
 force the update of the library
 
+## http://<ip>:3000/library/rebuild
+drop and rebuild the library
+
+
