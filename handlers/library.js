@@ -274,8 +274,33 @@ function library(verbose) {
         }
     }
 
-    post => /some regexp/.test(post.title)
+    self.random = function (numberOfSongs) {
+        var result = [];
+        if(numberOfSongs){
 
+            //failsafe
+            if(numberOfSongs > 100){
+                numberOfSongs = 100;
+            }
+
+            var randomIndexes = [];
+            var maxIndex = self.size();
+            while (randomIndexes.length<numberOfSongs) {
+                var randomInRange = Math.floor(Math.random() * (maxIndex + 1));
+                if(randomIndexes.indexOf(randomInRange) === -1){
+                    randomIndexes.push(randomInRange);
+                }
+            }
+
+            result = db.get('songs').filter(function(item, index){
+                if(item){
+                    return randomIndexes.indexOf(index) > -1;
+                }
+                return false;
+            }).value();
+        }
+        return result;
+    }
 }
 
 module.exports = library;
