@@ -63,6 +63,50 @@ function library(verbose) {
         }
     });
 
+    var removeFromLibrary = function (file, index) {
+        log(index + " - removing data for " + file);
+        db.get('songs').remove({ file: file }).write()
+    }
+
+    var addToLibrary = function (data, file, fileSize, index) {
+        log(index+" - updating data for " + file, data);
+        
+        data.file = file;
+        data.fileSize = fileSize;
+        data.url = file.replace(config.rootDir, config.webPath);
+
+        //cache and remove album images
+        try {
+            if(data.album && data.picture && data.picture.length >0 && data.picture[0].data) {
+                var exists = db.get('albumArt').find({ album: data.album }).value();
+                var parent = path.dirname(file);
+                var coverFile = parent+path.sep+data.album+".jpg";
+                var pictureUrl = coverFile.replace(config.rootDir, config.webPath);
+                var pictureData = {album: data.album, file: coverFile, url: pictureUrl};
+                if (exists) {
+                    db.get('albumArt').find({ file: coverFile  }).assign(pictureData).write();
+                } else {
+                    fs.writeFileSync(coverFile, data.picture[0].data);
+                    log("saved cover for album " + data.album +" to "+coverFile);
+                    db.get('albumArt').push(pictureData).write();
+                }
+            }
+        } catch (error) {
+            console.error(index+" - album art not cached for "+file);
+        }
+        data.picture = undefined;
+
+        var songs = db.get('songs');
+        var exists = songs.find({ file: file }).value();
+        if (exists) {
+            //log("file exists ", exists)
+            songs.find({ file: file }).assign(data).write();
+        } else {
+            log(index+" - added file " + file);
+            songs.push(data).write();
+        }
+    }
+
     // List all files in a directory in Node.js recursively in a synchronous fashion
     var walkSync = function (dir, filelist) {
             files = fs.readdirSync(dir);
@@ -79,51 +123,6 @@ function library(verbose) {
 
     self.update = function (clear) {
         try {
-
-            var removeFromLibrary = function (file, index) {
-                log(index + " - removing data for " + file);
-                db.get('songs').remove({ file: file }).write()
-            }
-
-            var addToLibrary = function (data, file, fileSize, index) {
-                log(index+" - updating data for " + file, data);
-                
-                data.file = file;
-                data.fileSize = fileSize;
-                data.url = file.replace(config.rootDir, config.webPath);
-
-                //cache and remove album images
-                try {
-                    if(data.album && data.picture && data.picture.length >0 && data.picture[0].data) {
-                        var exists = db.get('albumArt').find({ album: data.album }).value();
-                        var parent = path.dirname(file);
-                        var coverFile = parent+path.sep+data.album+".jpg";
-                        var pictureUrl = coverFile.replace(config.rootDir, config.webPath);
-                        var pictureData = {album: data.album, file: coverFile, url: pictureUrl};
-                        if (exists) {
-                            db.get('albumArt').find({ file: coverFile  }).assign(pictureData).write();
-                        } else {
-                            fs.writeFileSync(coverFile, data.picture[0].data);
-                            log("saved cover for album " + data.album +" to "+coverFile);
-                            db.get('albumArt').push(pictureData).write();
-                        }
-                    }
-                } catch (error) {
-                    console.error(index+" - album art not cached for "+file);
-                }
-                data.picture = undefined;
-
-                var songs = db.get('songs');
-                var exists = songs.find({ file: file }).value();
-                if (exists) {
-                    //log("file exists ", exists)
-                    songs.find({ file: file }).assign(data).write();
-                } else {
-                    log(index+" - added file " + file);
-                    songs.push(data).write();
-                }
-            }
-
             //init db
             if(clear || self.size() === 0){
                 self.clearDb();
