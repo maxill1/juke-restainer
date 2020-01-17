@@ -28,13 +28,13 @@ function library(verbose) {
     }
 
     //worker
-    myEmitter.on('updateLibrary', (audioFiles, index) => {
+    myEmitter.on('updateLibrary', (audioFiles, index, chunckIndex) => {
 
         var file = audioFiles[index];
         if (!audioFiles || audioFiles.length <= index) {
             //done
-            myEmitter.emit('done');
-        return "Found "+audioFiles.length + " files and parsed correctly "+db.get('songs').value().length+ " songs";
+            myEmitter.emit('done', "Found "+audioFiles.length + " files and parsed correctly "+db.get('songs').value().length+ " songs", index, audioFiles.length);
+            return;
         } else {
             var file = audioFiles[index];
 
@@ -44,32 +44,32 @@ function library(verbose) {
             const existingFile = self.file(file, true);
             if(existingFile && existingFile.length > 0 && existingFile[0].fileSize == fileSize){
                 log(index + " - skipping unchanged " + file);
-                myEmitter.emit('updateLibrary', audioFiles, index+1);
+                myEmitter.emit('updateLibrary', audioFiles, index+1, chunckIndex);
                 return;
             }
 
             mm.parseFile(file).then(metadata => {
-                addToLibrary(metadata.common, file, fileSize, index);
-                myEmitter.emit('updateLibrary', audioFiles, index+1);
+                addToLibrary(metadata.common, file, fileSize, index, chunckIndex);
+                myEmitter.emit('updateLibrary', audioFiles, index+1, chunckIndex);
             }, err=>{
-                removeFromLibrary(file, index);
+                removeFromLibrary(file, index, chunckIndex);
                 console.error(err.message);
-                myEmitter.emit('updateLibrary', audioFiles, index+1);
+                myEmitter.emit('updateLibrary', audioFiles, index+1, chunckIndex);
             }).catch(err => {
-                console.error(index + " - catched exception " +err.message);
+                console.error(index+"/"+chunckIndex+" - catched exception " +err.message);
                 removeFromLibrary(file, index);
-                myEmitter.emit('updateLibrary', audioFiles, index+1);
+                myEmitter.emit('updateLibrary', audioFiles, index+1, chunckIndex);
             });
         }
     });
 
-    var removeFromLibrary = function (file, index) {
-        log(index + " - removing data for " + file);
+    var removeFromLibrary = function (file, index, chunckIndex) {
+        log(index+"/"+chunckIndex+" - removing data for " + file);
         db.get('songs').remove({ file: file }).write()
     }
 
-    var addToLibrary = function (data, file, fileSize, index) {
-        log(index+" - updating data for " + file, data);
+    var addToLibrary = function (data, file, fileSize, index, chunckIndex) {
+        log(index+"/"+chunckIndex+" - updating data for " + file, data);
         
         data.file = file;
         data.fileSize = fileSize;
@@ -87,12 +87,12 @@ function library(verbose) {
                     db.get('albumArt').find({ file: coverFile  }).assign(pictureData).write();
                 } else {
                     fs.writeFileSync(coverFile, data.picture[0].data);
-                    log("saved cover for album " + data.album +" to "+coverFile);
+                    log(index+"/"+chunckIndex+" - saved cover for album " + data.album +" to "+coverFile);
                     db.get('albumArt').push(pictureData).write();
                 }
             }
         } catch (error) {
-            console.error(index+" - album art not cached for "+file);
+            console.error(index+"/"+chunckIndex+" - album art not cached for "+file);
         }
         data.picture = undefined;
 
@@ -102,7 +102,7 @@ function library(verbose) {
             //log("file exists ", exists)
             songs.find({ file: file }).assign(data).write();
         } else {
-            log(index+" - added file " + file);
+            log(index+"/"+chunckIndex+" - added file " + file);
             songs.push(data).write();
         }
     }
@@ -143,11 +143,11 @@ function library(verbose) {
               });
               
             var chunks = audioFiles.chunk_inefficient(500);
-            for (let index = 0; index < chunks.length; index++) {
-                const c = chunks[index];
-                myEmitter.emit('updateLibrary', c, 0);
+            for (let chunckIndex = 0; chunckIndex < chunks.length; chunckIndex++) {
+                const c = chunks[chunckIndex];
+                myEmitter.emit('updateLibrary', c, 0, chunckIndex);
 
-                console.log("Chunck "+index+"/"+chunks.length+" done...");
+                console.log("Chunck "+chunckIndex+"/"+chunks.length+" requested...");
                 let time = new Date().getTime();
                 while (time+5000 > new Date().getTime()) {
                     continue;
@@ -165,6 +165,11 @@ function library(verbose) {
 
     self.clearDb = function(){
         db.defaults({ songs: [], albumArt: [] }).write();
+    }
+
+    self.drop = function(){
+        db.set('songs', []).write();
+        db.set('albumArt', []).write();
     }
 
     self.size = function () {

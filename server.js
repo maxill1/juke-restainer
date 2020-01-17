@@ -50,6 +50,12 @@ app.use(errorHandler)
 var controllers = {};
 
 const library = new MusicLibrary();
+library.on('done', (message, indexDone, chunks) => {
+  console.log(indexDone+"/"+chunks+ " - " +message);
+  if(indexDone === chunks){
+      console.log("UPDATE COMPLETED!");
+  }
+});
 
 controllers.find_filename = function (req, res) {
   var keyword = req.params.fileName;
@@ -66,18 +72,19 @@ controllers.find_filename = function (req, res) {
 controllers.update_library = function (req, res) {
   console.log("Updating library");
   try {
-    var handler = library;
-    handler.update().then(function (results) {
-      console.log("SEARCH: " + results);
-
-      res.json(results);
-    }, function (error) {
-      res.send(e);
-    });
-
+      var handler = library;
+      res.json(handler.update());
   } catch (e) {
     res.send(e);
   }
+};
+
+controllers.rebuild_library = function (req, res) {
+  console.log("Clearing and rebuilding library");
+  var handler = library;
+  handler.drop();
+  console.log("Library dropped...");
+  controllers.update_library(req, res);
 };
 
 controllers.all_library = function (req, res) {
@@ -164,8 +171,9 @@ app.route('/title/:song').get(controllers.find_song);
 app.route('/album/:album').get(controllers.find_album);
 app.route('/random/:count').get(controllers.random);
 app.route('/random').get(controllers.random);
-app.route('/library/update').get(controllers.update_library);
 app.route('/library').get(controllers.all_library);
+app.route('/library/update').get(controllers.update_library);
+app.route('/library/rebuild').get(controllers.rebuild_library);
 
 
 function start(app){
