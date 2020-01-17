@@ -28,7 +28,7 @@ edit the config.json file to change port, web root and directory to scan
 you can use a custom config.json:
  
 ```
-node server -c /path/to/my/config.json
+node server -c /path/to/my/configfoldercontainingconfigjson/
 ```
 or launch with arguments:
  
