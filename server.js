@@ -143,29 +143,29 @@ controllers.find_album = function (req, res) {
   }
 };
 
-app.route('/search/:keyword')
-  .get(controllers.find);
+controllers.random = function (req, res) {
+  var count = parseInt(req.params.count) || 10;
+  console.log("Random songs ("+count+")");
 
-app.route('/file/:fileName')
-  .get(controllers.find_filename);
+  try {
+    var data = library.random(count);
+    console.log("Results for random " + count, data);
+    res.json(data);
+  } catch (e) {
+    res.send(e);
+  }
+};
 
-app.route('/artist/:artist')
-  .get(controllers.find_artist);
-
-app.route('/song/:song')
-  .get(controllers.find_song);
-
-app.route('/title/:song')
-  .get(controllers.find_song);
-
-app.route('/album/:album')
-  .get(controllers.find_album);
-
-app.route('/library/update')
-  .get(controllers.update_library);
-
-app.route('/library')
-  .get(controllers.all_library);
+app.route('/search/:keyword').get(controllers.find);
+app.route('/file/:fileName').get(controllers.find_filename);
+app.route('/artist/:artist').get(controllers.find_artist);
+app.route('/song/:song').get(controllers.find_song);
+app.route('/title/:song').get(controllers.find_song);
+app.route('/album/:album').get(controllers.find_album);
+app.route('/random/:count').get(controllers.random);
+app.route('/random').get(controllers.random);
+app.route('/library/update').get(controllers.update_library);
+app.route('/library').get(controllers.all_library);
 
 
 function start(app){

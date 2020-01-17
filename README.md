@@ -59,6 +59,9 @@ search "song" in song property
 ## http://<ip>:3000/album/:album
 search "album" in album property
 
+## http://<ip>:3000/random/:number or http://<ip>:3000/random (10 track as default)
+returns a number of random songs
+
 ## http://<ip>:3000/library
 returns the complete json library
 
