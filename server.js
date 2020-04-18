@@ -111,13 +111,13 @@ controllers.find = function (req, res) {
   }
 };
 
-controllers.find_song = function (req, res) {
-  var song = req.params.song;
-  console.log("Searching song " + song);
+controllers.find_title = function (req, res) {
+  var title = req.params.title;
+  console.log("Searching title " + title);
 
   try {
-    var data = library.song(song);
-    console.log("Results for song " + song, data);
+    var data = library.title(title);
+    console.log("Results for title " + title, data);
     res.json(data);
   } catch (e) {
     res.send(e);
@@ -129,7 +129,7 @@ controllers.find_artist = function (req, res) {
   console.log("Searching artist " + artist);
 
   try {
-    var data = library.song(artist);
+    var data = library.artist(artist);
     console.log("Results for artist " + artist, data);
     res.json(data);
   } catch (e) {
@@ -142,7 +142,7 @@ controllers.find_album = function (req, res) {
   console.log("Searching album " + album);
 
   try {
-    var data = library.song(album);
+    var data = library.album(album);
     console.log("Results for album " + album, data);
     res.json(data);
   } catch (e) {
@@ -166,8 +166,8 @@ controllers.random = function (req, res) {
 app.route('/search/:keyword').get(controllers.find);
 app.route('/file/:fileName').get(controllers.find_filename);
 app.route('/artist/:artist').get(controllers.find_artist);
-app.route('/song/:song').get(controllers.find_song);
-app.route('/title/:song').get(controllers.find_song);
+app.route('/song/:title').get(controllers.find_title);
+app.route('/title/:title').get(controllers.find_title);
 app.route('/album/:album').get(controllers.find_album);
 app.route('/random/:count').get(controllers.random);
 app.route('/random').get(controllers.random);

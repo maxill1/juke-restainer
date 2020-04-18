@@ -209,9 +209,18 @@ function library(verbose) {
 
     self.search = function (text, type, exactMatch) {
 
+        if(!text){
+            return [];
+        }
+
         var getSearchExpr = function(text, properties, exactMatch){
             if(!exactMatch){
                 return function(item){
+
+                    if(text.indexOf(" ")>-1){
+                        text = text.split(' ').join('.*');
+                    }
+
                     for (let index = 0; index < properties.length; index++) {
                         const element = properties[index];
                         var searchRegex = new RegExp("^(.*?(\\b"+text+"\\b)[^$]*)$", "i");
@@ -232,17 +241,6 @@ function library(verbose) {
         }
 
         try {
-            /*
-            if(!type){
-                type = "title";
-            }
-            var searchExpr = {};
-            searchExpr[type] = text;
-            if(!exactMatch){
-                var searchRegex = new RegExp("^(.*?(\\b"+text+"\\b)[^$]*)$", "i");
-                searchExpr = item => searchRegex.test(item[type]);
-            }*/
-
          
             if(!type){
                 type = "title";
@@ -253,15 +251,26 @@ function library(verbose) {
             }
 
             //var result = db.get('songs').find(searchExpr).value(); //Only one
-            var result = db.get('songs').filter(getSearchExpr(text, properties, exactMatch)).value();
-            if(type === 'all' && result.length === 0){
-                //if no results we will try with file name
-                db.get('songs').filter(getSearchExpr(text, ['file'], exactMatch)).value();
-            }else{
-                //add album art url
+            var results = db.get('songs').filter(getSearchExpr(text, properties, exactMatch)).value();
+
+            //if generic search, dig deeper
+            if(type === 'all' || type === 'title'){
+                //filename search
+                var files = db.get('songs').filter(getSearchExpr(text, ['file'], exactMatch)).value();
+                if(files){}
+                //if no results, fileResults matters
+                if(results.length === 0){
+                    results = results.concat(files);
+                }else{
+                    //we assume file with no tag may be releated to the search keywords
+                    results = results.concat(files.filter((item)=>{ return item.title === undefined || item.artist === undefined }))
+                }
+            }
+            //add album art url
+            if(results && results.length > 0){
                 try {
-                    for (let index = 0; index < result.length; index++) {
-                        const item = result[index];
+                    for (let index = 0; index < results.length; index++) {
+                        const item = results[index];
                         var albumArt = db.get('albumArt').find({ album: item.album }).value();
                         if(albumArt){
                             item.albumArtUrl = albumArt.url;
@@ -270,12 +279,12 @@ function library(verbose) {
                 } catch (error) {
                     console.error("cannot check albumArt for '"+item.album+"'" );
                 }
-
             }
 
-            return result;
+            return results;
         } catch (error) {
             console.log("Error searching "+text, error);
+            return [];
         }
     }
 
