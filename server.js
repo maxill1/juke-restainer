@@ -72,8 +72,9 @@ controllers.find_filename = function (req, res) {
 controllers.update_library = function (req, res) {
   console.log("Updating library");
   try {
+      res.json("Update requested");
       var handler = library;
-      res.json(handler.update());
+      handler.update()
   } catch (e) {
     res.send(e);
   }

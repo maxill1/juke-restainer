@@ -10,6 +10,17 @@ class MyEmitter extends EventEmitter {}
 const adapter = new FileSync(config.configPath+'db.json')
 const db = low(adapter);
 
+Object.defineProperty(Array.prototype, 'chunk_inefficient', {
+    value: function(chunkSize) {
+      var array = this;
+      return [].concat.apply([],
+        array.map(function(elem, i) {
+          return i % chunkSize ? [] : [array.slice(i, i + chunkSize)];
+        })
+      );
+    }
+  });
+
 function library(verbose) {
 
     var self = this;
@@ -130,34 +141,23 @@ function library(verbose) {
             var audioFiles = walkSync(rootDir, []);
 
             //myEmitter.emit('updateLibrary', audioFiles, 0);
-
-            Object.defineProperty(Array.prototype, 'chunk_inefficient', {
-                value: function(chunkSize) {
-                  var array = this;
-                  return [].concat.apply([],
-                    array.map(function(elem, i) {
-                      return i % chunkSize ? [] : [array.slice(i, i + chunkSize)];
-                    })
-                  );
-                }
-              });
               
             var chunks = audioFiles.chunk_inefficient(500);
             for (let chunckIndex = 0; chunckIndex < chunks.length; chunckIndex++) {
                 const c = chunks[chunckIndex];
                 myEmitter.emit('updateLibrary', c, 0, chunckIndex);
 
-                console.log("Chunck "+chunckIndex+"/"+chunks.length+" requested...");
+                console.log("Chunck "+(chunckIndex+1)+"/"+chunks.length+"...");
                 let time = new Date().getTime();
                 while (time+5000 > new Date().getTime()) {
                     continue;
                 }
                 //db.saveSync(config.configPath+'db.json');
-                console.log("Resuming...");
             }
             
-            return "Update requested";
-                
+            let endMsg = "Updated "+audioFiles.length + " files";
+            console.log(endMsg);
+            return endMsg;
         } catch (error) {
             console.error("catched exception " +error);
         }
