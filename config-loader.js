@@ -25,7 +25,7 @@ var cmdArgs = parseArgs();
 var configFile = './config.json';
 var configPath = "./";
 if (cmdArgs['-c']) {
-    configPath = cmdArgs['-c']+"/";
+    configPath = cmdArgs['-c'] + "/";
     console.log("Found external config.json", configPath);
     configFile = configPath + 'config.json'
 }
@@ -46,5 +46,7 @@ config.webPath = cmdArgs['-w'] ? cmdArgs['-w'] : config.webPath;
 config.rootDir = cmdArgs['-d'] ? cmdArgs['-d'] : config.rootDir;
 config.port = cmdArgs['-p'] ? cmdArgs['-p'] : config.port;
 config.token = cmdArgs['-t'] ? cmdArgs['-t'] : config.token;
+//default values
+config.ext = config.ext || ["mp3", "ogg"];
 
 module.exports = config;
