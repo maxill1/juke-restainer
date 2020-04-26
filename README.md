@@ -20,7 +20,8 @@ edit the config.json file to change port, web root and directory to scan
     "rootDir" : "/music", //the music folder to scan
     "webPath" : "http://192.168.1.100/music", //the web path to translate (you must share the resource with a web server)
     "port" : 3000, //the server port you are exposing
-    "token" : "" //a security token you may want to add
+    "token" : "", //a security token you may want to add
+    "ext" : ["mp3","ogg"] //supported file extensions
 }
 ```
 
