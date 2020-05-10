@@ -6,7 +6,7 @@ on:
     tags: 'dev'
 
 jobs:
-  buildx:
+  dev:
     runs-on: ubuntu-latest
     steps:
       -
