@@ -20,7 +20,8 @@ edit the config.json file to change port, web root and directory to scan
     "rootDir" : "/music", //the music folder to scan
     "webPath" : "http://192.168.1.100/music", //the web path to translate (you must share the resource with a web server)
     "port" : 3000, //the server port you are exposing
-    "token" : "" //a security token you may want to add
+    "token" : "", //a security token you may want to add
+    "ext" : ["mp3","ogg"] //supported file extensions
 }
 ```
 
@@ -28,7 +29,7 @@ edit the config.json file to change port, web root and directory to scan
 you can use a custom config.json:
  
 ```
-node server -c /path/to/my/config.json
+node server -c /path/to/my/configfoldercontainingconfigjson/
 ```
 or launch with arguments:
  
@@ -59,9 +60,16 @@ search "song" in song property
 ## http://<ip>:3000/album/:album
 search "album" in album property
 
+## http://<ip>:3000/random/:number or http://<ip>:3000/random (10 track as default)
+returns a number of random songs
+
 ## http://<ip>:3000/library
 returns the complete json library
 
 ## http://<ip>:3000/library/update
 force the update of the library
+
+## http://<ip>:3000/library/rebuild
+drop and rebuild the library
+
 
