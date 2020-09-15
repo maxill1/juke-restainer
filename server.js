@@ -3,11 +3,12 @@ var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
 var MusicLibrary = require('./handlers/library')
+var YoutubeDownloader = require('./handlers/youtube')
 
 process.on('uncaughtException', function (exception) {
-  console.log(exception); 
+  console.log(exception);
 });
-  
+
 console.log("Launching server... ");
 
 function logErrors(err, req, res, next) {
@@ -51,9 +52,9 @@ var controllers = {};
 
 const library = new MusicLibrary();
 library.on('done', (message, indexDone, chunks) => {
-  console.log(indexDone+"/"+chunks+ " - " +message);
-  if(indexDone === chunks){
-      console.log("UPDATE COMPLETED!");
+  console.log(indexDone + "/" + chunks + " - " + message);
+  if (indexDone === chunks) {
+    console.log("UPDATE COMPLETED!");
   }
 });
 
@@ -72,9 +73,9 @@ controllers.find_filename = function (req, res) {
 controllers.update_library = function (req, res) {
   console.log("Updating library");
   try {
-      res.json("Update requested");
-      var handler = library;
-      handler.update()
+    res.json("Update requested");
+    var handler = library;
+    handler.update()
   } catch (e) {
     res.send(e);
   }
@@ -153,7 +154,7 @@ controllers.find_album = function (req, res) {
 
 controllers.random = function (req, res) {
   var count = parseInt(req.params.count) || 10;
-  console.log("Random songs ("+count+")");
+  console.log("Random songs (" + count + ")");
 
   try {
     var data = library.random(count);
@@ -161,6 +162,29 @@ controllers.random = function (req, res) {
     res.json(data);
   } catch (e) {
     res.send(e);
+  }
+};
+
+controllers.downloadYT = function (req, res) {
+  var body = req.body;
+  if (!body || !body.list || body.list.size === 0) {
+    res.send("No data provided");
+  } else {
+    console.log("Downloading " + JSON.stringify(body.list));
+
+    try {
+
+      const downloader = new YoutubeDownloader();
+      body.list.forEach(url => {
+        downloader.start(url);
+      });
+
+      var data = `Download of ${body.list.size} url started`;
+      console.log(data);
+      res.json(data);
+    } catch (e) {
+      res.send(e);
+    }
   }
 };
 
@@ -175,9 +199,9 @@ app.route('/random').get(controllers.random);
 app.route('/library').get(controllers.all_library);
 app.route('/library/update').get(controllers.update_library);
 app.route('/library/rebuild').get(controllers.rebuild_library);
+app.route('/download/yt').post(controllers.downloadYT);
 
-
-function start(app){
+function start(app) {
   app.listen(config.port, '0.0.0.0');
   console.log('Library API server started on: ' + config.port);
 }
@@ -185,7 +209,7 @@ function start(app){
 //updating db
 const current = library;
 var size = current.size();
-if(size === 0){
+if (size === 0) {
   console.log("Updating library...");
 
   current.on('done', (index) => {
@@ -195,7 +219,7 @@ if(size === 0){
   });
 
   current.update();
-}else{
-  console.log("Library has "+size + " files");
+} else {
+  console.log("Library has " + size + " files");
   start(app);
 }
