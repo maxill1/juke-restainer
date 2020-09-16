@@ -167,10 +167,16 @@ controllers.random = function (req, res) {
 
 controllers.downloadYT = function (req, res) {
   var body = req.body;
-  if (!body || !body.list || body.list.size === 0) {
+  if (!body || !body.list || body.list.length === 0) {
     res.send("No data provided");
   } else {
     console.log("Downloading " + JSON.stringify(body.list));
+
+    if (!Array.isArray(body.list)) {
+      var list = [];
+      list.push(body.list);
+      body.list = list;
+    }
 
     try {
 
@@ -183,7 +189,7 @@ controllers.downloadYT = function (req, res) {
       console.log(data);
       res.json(data);
     } catch (e) {
-      res.send(e);
+      res.send(e.message);
     }
   }
 };
