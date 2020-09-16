@@ -35,7 +35,7 @@ module.exports = function () {
     console.log("FFMPEG location: " + ffmpeg);
     execute(ffmpeg, ['-version']);
 
-    this.convert = function (input) {
+    this.convert = function (input, onEnd) {
         var mp3 = input.replace(".opus", ".mp3");
 
         var ffmpegArgs = [
@@ -51,6 +51,9 @@ module.exports = function () {
                 console.log("Error converting " + input + ": exited with code " + code);
             } else {
                 console.log("Mp3 converted: " + mp3);
+                if (onEnd) {
+                    onEnd(mp3);
+                }
                 try {
                     Fs.unlinkSync(input)
                     console.log("Successfully deleted the opus file.")
