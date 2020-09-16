@@ -4,15 +4,20 @@
   "description": "A simple service to search music file on a folder, NAS, etc and expose data (tag, file location, etc) over api",
   "main": "server.js",
   "scripts": {
+    "start": "node server.js -c /opt/temp/docker/JukeRestainer",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Luca Mazzilli",
   "license": "Apache-2.0",
   "dependencies": {
     "express": "^4.17.1",
+    "ffmpeg-static": "^4.2.7",
     "find": "^0.2.9",
     "lowdb": "^1.0.0",
-    "music-metadata": "^5.4.3"
+    "music-metadata": "^5.4.3",
+    "node-id3": "^0.1.18",
+    "ytdl-core": "^3.2.2",
+    "ytpl": "^1.0.0"
   },
   "devDependencies": {
     "nodemon": "^1.19.4",
