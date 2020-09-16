@@ -33,7 +33,7 @@ module.exports = function () {
 
     //for debug purpose
     console.log("FFMPEG location: " + ffmpeg);
-    execute('ffmpeg', ['-version']);
+    execute(ffmpeg, ['-version']);
 
     this.convert = function (input) {
         var mp3 = input.replace(".opus", ".mp3");
@@ -46,7 +46,7 @@ module.exports = function () {
             'libmp3lame',
             mp3];
 
-        execute('ffmpeg', ffmpegArgs, (code) => {
+        execute(ffmpeg, ffmpegArgs, (code) => {
             if (code !== 0) {
                 console.log("Error converting " + input + ": exited with code " + code);
             } else {
