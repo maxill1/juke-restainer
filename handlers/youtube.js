@@ -92,18 +92,26 @@ module.exports = function () {
                 console.log('\n\n');
                 console.log(prefix + " Done");
 
-                try {
-                    //id3 tag
-                    writeId3Tag(output, title, title, playlistTitle, index);
-                } catch (e) {
-                    console.log("Error writing tags to " + output, e);
-                }
                 if (video && video.destroy) {
                     video.destroy();
                 }
 
                 //to mp3 using ffmpeg
-                mp3Converter.convert(output);
+                mp3Converter.convert(output, function (filePath) {
+                    try {
+                        var artist = title;
+                        var song = title;
+                        var test = /^(.*)[:-](.*)/gm.exec(title);
+                        if (test.length === 3) {
+                            artist = test[1].trim();
+                            song = test[2].trim();
+                        }
+                        //id3 tag
+                        writeId3Tag(filePath, song, artist, playlistTitle, index);
+                    } catch (e) {
+                        console.log("Error writing tags to " + filePath, e);
+                    }
+                });
 
                 //next
                 var next = index + 1;
@@ -157,10 +165,10 @@ module.exports = function () {
         try {
             console.log("Starting");
 
-            var path_ = config.rootDir;
+            var path_ = config.downloadDir || config.rootDir;
 
             if (!Fs.existsSync(path_)) {
-                throw "Invalid path";
+                throw "Invalid download path: " + path_;
             }
             if (!url_) {
                 throw "No url provided";
@@ -186,6 +194,7 @@ module.exports = function () {
                 download(0, urlList, path_, downloadVideo);
             }
 
+            return urlList;
         } catch (e) {
             handleError(url_, e, path_);
         }

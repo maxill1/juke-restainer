@@ -179,7 +179,7 @@ controllers.downloadYT = function (req, res) {
         downloader.start(url);
       });
 
-      var data = `Download of ${body.list.size} url started`;
+      var data = `Download of ${body.list.length} url started`;
       console.log(data);
       res.json(data);
     } catch (e) {
