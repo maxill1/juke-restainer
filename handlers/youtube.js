@@ -44,7 +44,7 @@ module.exports = function () {
         console.log(tagsOut);
     }
 
-    const download = function (index, urlList, path_, downloadVideo, playlistTitle) {
+    const download = function (index, urlList, path_, onEnd, downloadVideo, playlistTitle) {
 
         var size = urlList.length;
         if (index >= size) {
@@ -108,6 +108,11 @@ module.exports = function () {
                         }
                         //id3 tag
                         writeId3Tag(filePath, song, artist, playlistTitle, index);
+
+                        if (onEnd) {
+                            onEnd(filePath);
+                        }
+
                     } catch (e) {
                         console.log("Error writing tags to " + filePath, e);
                     }
@@ -115,7 +120,7 @@ module.exports = function () {
 
                 //next
                 var next = index + 1;
-                download(next, urlList, path_, downloadVideo, playlistTitle);
+                download(next, urlList, path_, onEnd, downloadVideo, playlistTitle);
             });
         }, function (err) {
             console.error(err.message);
@@ -133,7 +138,7 @@ module.exports = function () {
         return false;
     }
 
-    const downloadPlaylist = function (playlistUrl, path_, downloadVideo) {
+    const downloadPlaylist = function (playlistUrl, path_, onEnd, downloadVideo) {
 
         ytpl(playlistUrl).then(playlist => {
             console.log("Downloading playlist " + playlist.title + " " + playlist.items.length + " videos");
@@ -152,7 +157,7 @@ module.exports = function () {
                 var item = playlist.items[i];
                 urlList.push(item.id);
             }
-            download(0, urlList, playlistPath, downloadVideo, playlistTitle);
+            download(0, urlList, playlistPath, onEnd, downloadVideo, playlistTitle);
         }, function (err) {
             console.error(err.message);
         }).catch(err => {
@@ -161,7 +166,7 @@ module.exports = function () {
         });
     }
 
-    this.start = function (url_, downloadVideo) {
+    this.start = function (url_, onEnd, downloadVideo) {
         try {
             console.log("Starting");
 
@@ -179,7 +184,7 @@ module.exports = function () {
             }
 
             if (isPlaylist(url_)) {
-                downloadPlaylist(url_, path_, downloadVideo);
+                    downloadPlaylist(url_, path_, onEnd, downloadVideo);
             } else {
                 var urlList;
                 if (Array.isArray(url_)) {
@@ -191,10 +196,9 @@ module.exports = function () {
                 }
 
                 //recursive download
-                download(0, urlList, path_, downloadVideo);
+                    download(0, urlList, path_, onEnd, downloadVideo);
             }
 
-            return urlList;
         } catch (e) {
             handleError(url_, e, path_);
         }
