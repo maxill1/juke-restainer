@@ -181,9 +181,17 @@ controllers.downloadYT = function (req, res) {
     try {
 
       const downloader = new YoutubeDownloader();
-      body.list.forEach(url => {
-        downloader.start(url);
-      });
+      for (let index = 0; index < body.list.length; index++) {
+        const url = body.list[index];
+        downloader.start(url, function (filePath) {
+          //library add
+          library.parseAndAdd(filePath).then(function (data) {
+            console.log("Added to library: " + filePath);
+          }, function (err) {
+            console.log("Error adding to library " + filePath + " : " + err.message);
+          });
+        });
+      }
 
       var data = `Download of ${body.list.length} url started`;
       console.log(data);

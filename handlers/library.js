@@ -40,7 +40,6 @@ function library(verbose) {
 
     //worker
     myEmitter.on('updateLibrary', (audioFiles, index, chunckIndex) => {
-
         var file = audioFiles[index];
         if (!audioFiles || audioFiles.length <= index) {
             //done
@@ -48,7 +47,6 @@ function library(verbose) {
             return;
         } else {
             var file = audioFiles[index];
-
             //existing file and size, skip
             const stats = fs.statSync(file);
             const fileSize = stats.size;
@@ -56,31 +54,55 @@ function library(verbose) {
             if (existingFile && existingFile.length > 0 && existingFile[0].fileSize == fileSize) {
                 log(index + " - skipping unchanged " + file);
                 myEmitter.emit('updateLibrary', audioFiles, index + 1, chunckIndex);
-                return;
+            } else {
+
+                var loggingString = index + "/" + chunckIndex;
+
+                self.parseAndAdd(file, fileSize, loggingString).then(
+                    function (data) {
+                        myEmitter.emit('updateLibrary', audioFiles, index + 1, chunckIndex);
+                    },
+                    function (err) {
+                        myEmitter.emit('updateLibrary', audioFiles, index + 1, chunckIndex);
+                    });
             }
 
-            mm.parseFile(file).then(metadata => {
-                addToLibrary(metadata.common, file, fileSize, index, chunckIndex);
-                myEmitter.emit('updateLibrary', audioFiles, index + 1, chunckIndex);
-            }, err => {
-                removeFromLibrary(file, index, chunckIndex);
-                console.error(err.message);
-                myEmitter.emit('updateLibrary', audioFiles, index + 1, chunckIndex);
-            }).catch(err => {
-                console.error(index + "/" + chunckIndex + " - catched exception " + err.message);
-                removeFromLibrary(file, index);
-                myEmitter.emit('updateLibrary', audioFiles, index + 1, chunckIndex);
-            });
         }
     });
 
-    var removeFromLibrary = function (file, index, chunckIndex) {
-        log(index + "/" + chunckIndex + " - removing data for " + file);
+    self.parseAndAdd = function (file, fileSize, loggingString) {
+
+        return new Promise((resolve, reject) => {
+
+            if (!fileSize) {
+                fileSize = fs.statSync(file).size;
+            }
+
+            mm.parseFile(file).then(metadata => {
+                addToLibrary(metadata.common, file, fileSize, loggingString);
+                //ok
+                resolve(file);
+            }, err => {
+                removeFromLibrary(file, loggingString);
+                console.error(err.message);
+                //ko
+                reject(err);
+            }).catch(err => {
+                console.error(loggingString + " - catched exception " + err.message);
+                removeFromLibrary(file, loggingString);
+                //ko
+                reject(err);
+            });
+        });
+    }
+
+    var removeFromLibrary = function (file, loggingString) {
+        log(loggingString + " - removing data for " + file);
         db.get('songs').remove({ file: file }).write()
     }
 
-    var addToLibrary = function (data, file, fileSize, index, chunckIndex) {
-        log(index + "/" + chunckIndex + " - updating data for " + file, data);
+    var addToLibrary = function (data, file, fileSize, loggingString) {
+        log(loggingString + " - updating data for " + file, data);
 
         data.file = file;
         data.fileSize = fileSize;
@@ -98,12 +120,12 @@ function library(verbose) {
                     db.get('albumArt').find({ file: coverFile }).assign(pictureData).write();
                 } else {
                     fs.writeFileSync(coverFile, data.picture[0].data);
-                    log(index + "/" + chunckIndex + " - saved cover for album " + data.album + " to " + coverFile);
+                    log(loggingString + " - saved cover for album " + data.album + " to " + coverFile);
                     db.get('albumArt').push(pictureData).write();
                 }
             }
         } catch (error) {
-            console.error(index + "/" + chunckIndex + " - album art not cached for " + file);
+            console.error(loggingString + " - album art not cached for " + file);
         }
         data.picture = undefined;
 
@@ -113,7 +135,7 @@ function library(verbose) {
             //log("file exists ", exists)
             songs.find({ file: file }).assign(data).write();
         } else {
-            log(index + "/" + chunckIndex + " - added file " + file);
+            log(loggingString + " - added file " + file);
             songs.push(data).write();
         }
     }
