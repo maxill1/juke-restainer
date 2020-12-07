@@ -1,5 +1,6 @@
 {
     "rootDir": "/music",
+    "downloadDir": "/music/download",
     "webPath": "http://192.168.1.100/music",
     "port": 3000,
     "token": "",
