@@ -18,6 +18,9 @@ module.exports = function () {
     }
 
     const cleanupTitle = function (title) {
+        if (!title) {
+            return "";
+        }
         title = title.replace('/', '-');
         title = title.replace('\\', '-');
         title = title.replace('&', 'and');
@@ -67,9 +70,8 @@ module.exports = function () {
 
         //get info
         ytdl.getInfo(url_).then(function (info) {
-
             //video title as file name
-            var title = cleanupTitle(info.title);
+            var title = cleanupTitle(info.videoDetails.title);
             var output = path_ + title + "." + ext;
 
             console.log("Downloading " + url_ + " on " + output);
@@ -184,7 +186,7 @@ module.exports = function () {
             }
 
             if (isPlaylist(url_)) {
-                    downloadPlaylist(url_, path_, onEnd, downloadVideo);
+                downloadPlaylist(url_, path_, onEnd, downloadVideo);
             } else {
                 var urlList;
                 if (Array.isArray(url_)) {
@@ -196,7 +198,7 @@ module.exports = function () {
                 }
 
                 //recursive download
-                    download(0, urlList, path_, onEnd, downloadVideo);
+                download(0, urlList, path_, onEnd, downloadVideo);
             }
 
         } catch (e) {
