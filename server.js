@@ -4,6 +4,7 @@ var app = express();
 var bodyParser = require('body-parser');
 var MusicLibrary = require('./handlers/library')
 var YoutubeDownloader = require('./handlers/youtube')
+var path = require('path')
 
 process.on('uncaughtException', function (exception) {
   console.log(exception);
@@ -220,7 +221,10 @@ function start(app) {
   console.log('Library API server started on: ' + config.port);
 
   //watch root dir for updates
-  addWatcher(config.rootDir);
+  if (config.watchdog) {
+    addWatcher(config.rootDir);
+  }
+
 }
 
 
@@ -242,7 +246,6 @@ if (size === 0) {
   start(app);
 }
 
-
 function addWatcher(watchDir) {
   const chokidar = require('chokidar');
 
@@ -253,21 +256,31 @@ function addWatcher(watchDir) {
     persistent: true
   });
 
-  // Something to use when events are received.
-  const log = console.log.bind(console);
-  // Add event listeners.
-  watcher
-    .on('add', path => log(`File ${path} has been added`))
-    .on('change', path => log(`File ${path} has been changed`))
-    .on('unlink', path => log(`File ${path} has been removed`));
+  function check(file, eventName) {
+    //extension check
+    const ext = path.extname(file);
+    if (!config.ext.includes(ext && ext.substring(0, 1))) {
+      console.log("skipping " + file);
+      return;
+    }
+    console.log(`File ${file} has been ${eventName}`);
+    library.checkFile(file, undefined, eventName);
+  }
 
-  // More possible events.
+  //listening for add, change and remove
   watcher
-    .on('addDir', path => log(`Directory ${path} has been added`))
-    .on('unlinkDir', path => log(`Directory ${path} has been removed`))
-    .on('error', error => log(`Watcher error: ${error}`))
-    .on('ready', () => log('Initial scan complete. Ready for changes'))
-    .on('raw', (event, path, details) => { // internal
-      log('Raw event info:', event, path, details);
+    .on('add', file => {
+      check(file, 'added');
+    })
+    .on('change', file => {
+      check(file, 'changed');
+    })
+    .on('unlink', file => {
+      console.log(`File ${file} has been removed`);
+      library.removeFromLibrary(file, "unlink");
+    })
+    .on('ready', () => {
+      console.log('Watchdog initial scan complete. Listening.')
     });
+
 }

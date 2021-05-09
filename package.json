@@ -22,7 +22,7 @@
     "ytpl": "^1.0.1"
   },
   "devDependencies": {
-    "nodemon": "^1.19.4",
-    "kind-of": ">=6.0.3"
+    "kind-of": ">=6.0.3",
+    "nodemon": "^1.19.4"
   }
 }
