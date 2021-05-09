@@ -221,7 +221,7 @@ function start(app) {
   console.log('Library API server started on: ' + config.port);
 
   //watch root dir for updates
-  if (config.watchdog) {
+  if (config.watchdog && config.watchdog.enabled) {
     addWatcher(config.rootDir);
   }
 
@@ -253,7 +253,11 @@ function addWatcher(watchDir) {
   // Initialize watcher.
   const watcher = chokidar.watch(watchDir, {
     ignored: /(^|[\/\\])\../, // ignore dotfiles
-    persistent: true
+    ignoreInitial: config.watchdog.ignoreInitial || false, //this avoids tthe emit of add/addDir events at startup
+    persistent: true,
+    usePolling: config.watchdog.usePolling || false, //default false, set this to true to successfully watch files over a network
+    interval: config.watchdog.interval || 100,
+    binaryInterval: config.watchdog.binaryInterval || 300
   });
 
   function check(file, eventName) {
