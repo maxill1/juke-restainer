@@ -218,7 +218,11 @@ app.route('/download/yt').post(controllers.downloadYT);
 function start(app) {
   app.listen(config.port, '0.0.0.0');
   console.log('Library API server started on: ' + config.port);
+
+  //watch root dir for updates
+  addWatcher(config.rootDir);
 }
+
 
 //updating db
 const current = library;
@@ -236,4 +240,34 @@ if (size === 0) {
 } else {
   console.log("Library has " + size + " files");
   start(app);
+}
+
+
+function addWatcher(watchDir) {
+  const chokidar = require('chokidar');
+
+
+  // Initialize watcher.
+  const watcher = chokidar.watch(watchDir, {
+    ignored: /(^|[\/\\])\../, // ignore dotfiles
+    persistent: true
+  });
+
+  // Something to use when events are received.
+  const log = console.log.bind(console);
+  // Add event listeners.
+  watcher
+    .on('add', path => log(`File ${path} has been added`))
+    .on('change', path => log(`File ${path} has been changed`))
+    .on('unlink', path => log(`File ${path} has been removed`));
+
+  // More possible events.
+  watcher
+    .on('addDir', path => log(`Directory ${path} has been added`))
+    .on('unlinkDir', path => log(`Directory ${path} has been removed`))
+    .on('error', error => log(`Watcher error: ${error}`))
+    .on('ready', () => log('Initial scan complete. Ready for changes'))
+    .on('raw', (event, path, details) => { // internal
+      log('Raw event info:', event, path, details);
+    });
 }
