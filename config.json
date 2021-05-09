@@ -7,5 +7,6 @@
     "ext": [
         "mp3",
         "ogg"
-    ]
+    ],
+    "watchdog": true
 }

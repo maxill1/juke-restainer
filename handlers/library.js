@@ -48,28 +48,53 @@ function library(verbose) {
         } else {
             var file = audioFiles[index];
             //existing file and size, skip
-            const stats = fs.statSync(file);
-            const fileSize = stats.size;
-            const existingFile = self.file(file, true);
-            if (existingFile && existingFile.length > 0 && existingFile[0].fileSize == fileSize) {
-                log(index + " - skipping unchanged " + file);
-                myEmitter.emit('updateLibrary', audioFiles, index + 1, chunckIndex);
-            } else {
-
-                var loggingString = index + "/" + chunckIndex;
-
-                self.parseAndAdd(file, fileSize, loggingString).then(
-                    function (data) {
-                        myEmitter.emit('updateLibrary', audioFiles, index + 1, chunckIndex);
-                    },
-                    function (err) {
-                        myEmitter.emit('updateLibrary', audioFiles, index + 1, chunckIndex);
-                    });
-            }
-
+            self.checkFile(file, audioFiles, index, chunckIndex);
         }
     });
 
+    /**
+     * Check if file is changed, then parses it and add to library
+     */
+    self.checkFile = function (file, audioFiles, index, chunckIndex) {
+        //extension check
+        const ext = path.extname(file);
+        if (!file || !config.ext.includes(ext && ext.substring(0, 1))) {
+            return;
+        }
+
+        if (!index) {
+            index = 0;
+        }
+        if (!chunckIndex) {
+            chunckIndex = 0;
+        }
+        if (!audioFiles) {
+            audioFiles = [];
+        }
+
+        const stats = fs.statSync(file);
+        const fileSize = stats.size;
+        const existingFile = self.file(file, true);
+        if (existingFile && existingFile.length > 0 && existingFile[0].fileSize == fileSize) {
+            console.log(index + " - skipping unchanged " + file);
+            myEmitter.emit('updateLibrary', audioFiles, index + 1, chunckIndex);
+        } else {
+
+            var loggingString = index + "/" + chunckIndex;
+
+            self.parseAndAdd(file, fileSize, loggingString).then(
+                function (data) {
+                    myEmitter.emit('updateLibrary', audioFiles, index + 1, chunckIndex);
+                },
+                function (err) {
+                    myEmitter.emit('updateLibrary', audioFiles, index + 1, chunckIndex);
+                });
+        }
+    }
+
+    /**
+     * parse file then add to library (remove on errors)
+     */
     self.parseAndAdd = function (file, fileSize, loggingString) {
 
         return new Promise((resolve, reject) => {
@@ -77,30 +102,43 @@ function library(verbose) {
             if (!fileSize) {
                 fileSize = fs.statSync(file).size;
             }
+            if (!loggingString) {
+                loggingString = "parseAndAdd";
+            }
 
             mm.parseFile(file).then(metadata => {
                 addToLibrary(metadata.common, file, fileSize, loggingString);
                 //ok
                 resolve(file);
             }, err => {
-                removeFromLibrary(file, loggingString);
+                self.removeFromLibrary(file, loggingString);
                 console.error(err.message);
                 //ko
                 reject(err);
             }).catch(err => {
                 console.error(loggingString + " - catched exception " + err.message);
-                removeFromLibrary(file, loggingString);
+                self.removeFromLibrary(file, loggingString);
                 //ko
                 reject(err);
             });
         });
     }
 
-    var removeFromLibrary = function (file, loggingString) {
+    /**
+     * remove e file from library
+     */
+    self.removeFromLibrary = function (file, loggingString) {
         log(loggingString + " - removing data for " + file);
         db.get('songs').remove({ file: file }).write()
     }
 
+    /**
+     * Add a file to library
+     * @param {*} data 
+     * @param {*} file 
+     * @param {*} fileSize 
+     * @param {*} loggingString 
+     */
     var addToLibrary = function (data, file, fileSize, loggingString) {
         log(loggingString + " - updating data for " + file, data);
 
