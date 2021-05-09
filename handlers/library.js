@@ -57,8 +57,7 @@ function library(verbose) {
      */
     self.checkFile = function (file, audioFiles, index, chunckIndex) {
         //extension check
-        const ext = path.extname(file);
-        if (!file || !config.ext.includes(ext && ext.substring(0, 1))) {
+        if (!file || !config.ext.includes(path.extname(file).substring(1))) {
             return;
         }
 

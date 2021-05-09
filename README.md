@@ -22,9 +22,32 @@ edit the config.json file to change port, web root and directory to scan
     "port" : 3000, //the server port you are exposing
     "token" : "", //a security token you may want to add
     "ext" : ["mp3","ogg"], //supported file extensions,
-    "watchdog" : true //enable rootDir file watchdog 
-}
+    "watchdog": {
+        "enabled": false,  //enable rootDir file watchdog 
+        "usePolling": false, //see https://github.com/paulmillr/chokidar#performance 
+        "ignoreInitial": true,  //see https://github.com/paulmillr/chokidar#performance 
+        "interval": 100,  //see https://github.com/paulmillr/chokidar#performance 
+        "binaryInterval": 300  //see https://github.com/paulmillr/chokidar#performance 
+    }
 ```
+#### Watchdog
+When watching large amount of files you should increase max_user_watches if you encounter this error: 
+"UnhandledPromiseRejectionWarning: Error: ENOSPC: System limit for number of file watchers reached"
+
+In your docker host run:
+
+```
+echo fs.inotify.max_user_watches=100000 | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+```
+
+then check with
+```
+cat /proc/sys/fs/inotify/max_user_watches
+```
+
+If watching a network mount you should enable polling.
+ 
 
 ### running with args
 you can use a custom config.json:

@@ -8,5 +8,11 @@
         "mp3",
         "ogg"
     ],
-    "watchdog": true
+    "watchdog": {
+        "enabled": false,
+        "usePolling": false,
+        "ignoreInitial": true,
+        "interval": 100,
+        "binaryInterval": 300
+    }
 }
