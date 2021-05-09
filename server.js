@@ -258,8 +258,7 @@ function addWatcher(watchDir) {
 
   function check(file, eventName) {
     //extension check
-    const ext = path.extname(file);
-    if (!config.ext.includes(ext && ext.substring(0, 1))) {
+    if (!config.ext.includes(path.extname(file).substring(1))) {
       console.log("skipping " + file);
       return;
     }
