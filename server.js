@@ -4,6 +4,7 @@ var app = express();
 var bodyParser = require('body-parser');
 var MusicLibrary = require('./handlers/library')
 var YoutubeDownloader = require('./handlers/youtube')
+var path = require('path')
 
 process.on('uncaughtException', function (exception) {
   console.log(exception);
@@ -218,7 +219,14 @@ app.route('/download/yt').post(controllers.downloadYT);
 function start(app) {
   app.listen(config.port, '0.0.0.0');
   console.log('Library API server started on: ' + config.port);
+
+  //watch root dir for updates
+  if (config.watchdog && config.watchdog.enabled) {
+    addWatcher(config.rootDir);
+  }
+
 }
+
 
 //updating db
 const current = library;
@@ -236,4 +244,46 @@ if (size === 0) {
 } else {
   console.log("Library has " + size + " files");
   start(app);
+}
+
+function addWatcher(watchDir) {
+  const chokidar = require('chokidar');
+
+
+  // Initialize watcher.
+  const watcher = chokidar.watch(watchDir, {
+    ignored: /(^|[\/\\])\../, // ignore dotfiles
+    ignoreInitial: config.watchdog.ignoreInitial || false, //this avoids tthe emit of add/addDir events at startup
+    persistent: true,
+    usePolling: config.watchdog.usePolling || false, //default false, set this to true to successfully watch files over a network
+    interval: config.watchdog.interval || 100,
+    binaryInterval: config.watchdog.binaryInterval || 300
+  });
+
+  function check(file, eventName) {
+    //extension check
+    if (!config.ext.includes(path.extname(file).substring(1))) {
+      console.log("skipping " + file);
+      return;
+    }
+    console.log(`File ${file} has been ${eventName}`);
+    library.checkFile(file, undefined, eventName);
+  }
+
+  //listening for add, change and remove
+  watcher
+    .on('add', file => {
+      check(file, 'added');
+    })
+    .on('change', file => {
+      check(file, 'changed');
+    })
+    .on('unlink', file => {
+      console.log(`File ${file} has been removed`);
+      library.removeFromLibrary(file, "unlink");
+    })
+    .on('ready', () => {
+      console.log('Watchdog initial scan complete. Listening.')
+    });
+
 }

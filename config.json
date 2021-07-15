@@ -7,5 +7,12 @@
     "ext": [
         "mp3",
         "ogg"
-    ]
+    ],
+    "watchdog": {
+        "enabled": false,
+        "usePolling": false,
+        "ignoreInitial": true,
+        "interval": 100,
+        "binaryInterval": 300
+    }
 }
