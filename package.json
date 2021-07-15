@@ -1,6 +1,6 @@
 {
   "name": "juke-restainer",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A simple service to search music file on a folder, NAS, etc and expose data (tag, file location, etc) over api",
   "main": "server.js",
   "scripts": {
