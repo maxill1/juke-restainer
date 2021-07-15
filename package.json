@@ -18,7 +18,7 @@
     "lowdb": "^1.0.0",
     "music-metadata": "^5.4.3",
     "node-id3": "^0.1.21",
-    "ytdl-core": "^4.7.0",
+    "ytdl-core": "^4.8.3",
     "ytpl": "^1.0.1"
   },
   "devDependencies": {
