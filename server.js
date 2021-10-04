@@ -4,6 +4,8 @@ var app = express();
 var bodyParser = require('body-parser');
 var MusicLibrary = require('./handlers/library')
 var YoutubeDownloader = require('./handlers/youtube')
+var mediashuffle = require('./handlers/mediashuffle')
+var CastV2 = require('./handlers/castv2')
 var path = require('path')
 
 process.on('uncaughtException', function (exception) {
@@ -11,6 +13,7 @@ process.on('uncaughtException', function (exception) {
 });
 
 console.log("Launching server... ");
+var cast = undefined;
 
 function logErrors(err, req, res, next) {
   console.error(err.stack)
@@ -203,6 +206,134 @@ controllers.downloadYT = function (req, res) {
   }
 };
 
+
+controllers.play = function (req, res) {
+  var body = req.body;
+  if (!body || !body.list || body.list.length === 0) {
+    res.send("No data provided");
+  } else if (!body.deviceName && !body.address) {
+    res.send("No device name or ip address provided");
+  } else {
+    console.log("Requested: " + JSON.stringify(body.list));
+
+    if (!Array.isArray(body.list)) {
+      var list = [];
+      list.push(body.list);
+      body.list = list;
+    }
+
+    const devices = library.devices();
+    const deviceId = Object.keys(devices).find(id=> {
+      var data = devices[id];
+      return  id.toLowerCase() === body.deviceName.toLowerCase() 
+      || data.frendlyName.toLowerCase() === body.deviceName.toLowerCase()
+    })
+
+    try {
+      //priority to ip address
+      cast.play(body.address || deviceId, body.list, body.image);
+
+      var data = `Playing started on ${body.deviceName} with ${body.list.length} files`;
+      console.log(data);
+      res.json(data);
+    } catch (e) {
+      res.send(e.message);
+    }
+  }
+};
+
+
+controllers.say = function (req, res) {
+  var body = req.body;
+  if (!body || !body.text || body.text.length === 0) {
+    res.send("No text provided");
+  } else if (!body.deviceName && !body.address) {
+    res.send("No device name or ip address provided");
+  } else {
+
+    try {
+      //priority to ip address
+      cast.say(body.address || body.deviceName, body.text, body.lang);
+      console.log(`Saying "${body.text}" on ${deviceName}`);
+      res.json("OK");
+    } catch (e) {
+      res.send(e.message);
+    }
+  }
+};
+
+controllers.searchAndPlay = function (req, res) {
+  var body = req.body;
+  if (!body || !body.query) {
+    res.send("No query provided");
+  } else if (!body.deviceName && !body.address) {
+    res.send("No device name or ip address provided");
+  } else {
+    console.log("Requested: " + JSON.stringify(body.list));
+
+
+    try {
+      var list = [];
+      const searchType = body.type || 'file';
+      switch (searchType) {
+        case 'file':
+          list = library.file(body.query);
+          break;
+        case 'title':
+          list = library.title(body.query);
+          break;
+        case 'artist':
+          list = library.artist(body.query);
+          break;
+        case 'album':
+          list = library.album(body.query);
+          break;
+        default:
+          break;
+      }
+
+      //TODO data to list and shuffle  (da nodered)
+      list = mediaShuffle(list, body.query, searchType);
+
+      if (!list || list.length === 0) {
+        const text = config.notFound.text || "No results";
+        const lang = config.notFound.lang || "en";
+        cast.say(body.address || body.deviceName, text, lang);
+        console.log("No results");
+      } else {
+        //priority to ip address
+        cast.play(body.address || body.deviceName, body.list, body.image);
+        console.log(`Playing started on ${deviceName} with ${body.list.length} files`);
+      }
+      //return the actual size
+      res.json(list);
+    } catch (e) {
+      res.send(e.message);
+    }
+  }
+};
+
+
+controllers.devices = function (req, res) {
+  try {
+    //sgoogle cast devices found
+    res.json(cast.getDevices());
+  } catch (e) {
+    res.send(e);
+  }
+};
+
+controllers.devicesScan = function (req, res) {
+  try {
+    //search for googlecast devices via mdns
+    cast.scan(library.saveDevices);
+    res.json("Searching googlecast devices via mdns...");
+  } catch (e) {
+    res.send(e);
+  }
+};
+
+//local library api
 app.route('/search/:keyword').get(controllers.find);
 app.route('/file/:fileName').get(controllers.find_filename);
 app.route('/artist/:artist').get(controllers.find_artist);
@@ -214,7 +345,15 @@ app.route('/random').get(controllers.random);
 app.route('/library').get(controllers.all_library);
 app.route('/library/update').get(controllers.update_library);
 app.route('/library/rebuild').get(controllers.rebuild_library);
+//ytdl related api
 app.route('/download/yt').post(controllers.downloadYT);
+//googlecast related api
+app.route('/play').post(controllers.play);
+app.route('/say').post(controllers.say);
+//TODO
+//app.route('/searchAndPlay').post(controllers.say);
+app.route('/devices').get(controllers.devices);
+app.route('/devices/scan').get(controllers.devicesScan);
 
 function start(app) {
   app.listen(config.port, '0.0.0.0');
@@ -223,6 +362,12 @@ function start(app) {
   //watch root dir for updates
   if (config.watchdog && config.watchdog.enabled) {
     addWatcher(config.rootDir);
+  }
+
+  if (config.cast) {
+    cast = new CastV2();
+    //search for googlecast devices via mdns
+    cast.scan(library.saveDevices);
   }
 
 }

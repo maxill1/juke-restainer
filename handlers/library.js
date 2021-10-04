@@ -230,7 +230,7 @@ function library(verbose) {
     }
 
     self.clearDb = function () {
-        db.defaults({ songs: [], albumArt: [] }).write();
+        db.defaults({ songs: [], albumArt: [], devices: {} }).write();
     }
 
     self.drop = function () {
@@ -380,6 +380,24 @@ function library(verbose) {
             }).value();
         }
         return result;
+    }
+
+    self.devices = ()=>{
+        return db.get('devices').value() || {}
+    }
+
+    self.saveDevices = (devices)=>{
+        let data = self.devices();
+        devices.forEach(name => {
+            if (!data[name]) {
+                data[name] = {
+                    frendlyName: name
+                }
+            }else{
+                //data[name].ip = 
+            }
+        });
+        db.set('devices', data).write();
     }
 }
 

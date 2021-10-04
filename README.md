@@ -47,7 +47,10 @@ cat /proc/sys/fs/inotify/max_user_watches
 ```
 
 If watching a network mount you should enable polling.
- 
+
+#### CastV2 and mdns
+If you get into this error and you cannot find any device, use ip in post request or try to fix your /etc/nsswitch.conf. See here: https://github.com/agnat/node_mdns/issues/130#issuecomment-543157566
+
 
 ### running with args
 you can use a custom config.json:

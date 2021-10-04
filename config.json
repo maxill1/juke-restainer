@@ -14,5 +14,10 @@
         "ignoreInitial": true,
         "interval": 100,
         "binaryInterval": 300
+    },
+    "cast": true,
+    "notFound": {
+        "text": "No results found for ",
+        "lang": "en"
     }
 }
