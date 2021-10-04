@@ -18,11 +18,11 @@
     "lowdb": "^1.0.0",
     "music-metadata": "^5.4.3",
     "node-id3": "^0.1.21",
-    "ytdl-core": "^4.8.3",
-    "ytpl": "^1.0.1"
+    "ytdl-core": "^4.9.1",
+    "ytpl": "^2.2.3"
   },
   "devDependencies": {
     "kind-of": ">=6.0.3",
-    "nodemon": "^1.19.4"
+    "nodemon": "^2.0.13"
   }
 }
