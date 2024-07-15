@@ -54,12 +54,8 @@ module.exports = function () {
                 if (onEnd) {
                     onEnd(mp3);
                 }
-                try {
-                    Fs.unlinkSync(input)
-                    console.log("Successfully deleted the opus file.")
-                } catch (err) {
-                    throw err
-                }
+                Fs.unlinkSync(input)
+                console.log("Successfully deleted the opus file.")
             }
         });
 

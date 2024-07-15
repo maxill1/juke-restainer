@@ -1,5 +1,5 @@
-var youtube = require('../handlers/youtube')
-
+const handler = require('../handlers/youtube-handler')
+//const handler = new require('../handlers/youtube')();
 var handler = new youtube();
 
 //single file

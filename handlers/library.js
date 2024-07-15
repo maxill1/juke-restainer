@@ -40,13 +40,13 @@ function library(verbose) {
 
     //worker
     myEmitter.on('updateLibrary', (audioFiles, index, chunckIndex) => {
-        var file = audioFiles[index];
+        let file = audioFiles[index];
         if (!audioFiles || audioFiles.length <= index) {
             //done
             myEmitter.emit('done', "Found " + audioFiles.length + " files and parsed correctly " + db.get('songs').value().length + " songs", index, audioFiles.length);
             return;
         } else {
-            var file = audioFiles[index];
+            file = audioFiles[index];
             //existing file and size, skip
             self.checkFile(file, audioFiles, index, chunckIndex);
         }
@@ -82,10 +82,10 @@ function library(verbose) {
             var loggingString = index + "/" + chunckIndex;
 
             self.parseAndAdd(file, fileSize, loggingString).then(
-                function (data) {
+                function (_data) {
                     myEmitter.emit('updateLibrary', audioFiles, index + 1, chunckIndex);
                 },
-                function (err) {
+                function (_err) {
                     myEmitter.emit('updateLibrary', audioFiles, index + 1, chunckIndex);
                 });
         }
@@ -148,7 +148,7 @@ function library(verbose) {
         //cache and remove album images
         try {
             if (data.album && data.picture && data.picture.length > 0 && data.picture[0].data) {
-                var exists = db.get('albumArt').find({ album: data.album }).value();
+                const exists = db.get('albumArt').find({ album: data.album }).value();
                 var parent = path.dirname(file);
                 var coverFile = parent + path.sep + data.album + ".jpg";
                 var pictureUrl = coverFile.replace(config.rootDir, config.webPath);
@@ -161,14 +161,13 @@ function library(verbose) {
                     db.get('albumArt').push(pictureData).write();
                 }
             }
-        } catch (error) {
+        } catch (_error) {
             console.error(loggingString + " - album art not cached for " + file);
         }
         data.picture = undefined;
 
         var songs = db.get('songs');
-        var exists = songs.find({ file: file }).value();
-        if (exists) {
+        if (songs.find({ file: file }).value()) {
             //log("file exists ", exists)
             songs.find({ file: file }).assign(data).write();
         } else {
@@ -179,7 +178,7 @@ function library(verbose) {
 
     // List all files in a directory in Node.js recursively in a synchronous fashion
     var walkSync = function (dir, filelist) {
-        files = fs.readdirSync(dir);
+        const files = fs.readdirSync(dir);
         filelist = filelist || [];
         files.forEach(function (file) {
             if (fs.statSync(dir + '/' + file).isDirectory()) {
@@ -334,17 +333,19 @@ function library(verbose) {
             }
             //add album art url
             if (results && results.length > 0) {
-                try {
-                    for (let index = 0; index < results.length; index++) {
+              
+                    for (let index = 0; index < results?.length; index++) {
                         const item = results[index];
-                        var albumArt = db.get('albumArt').find({ album: item.album }).value();
-                        if (albumArt) {
-                            item.albumArtUrl = albumArt.url;
+                        try {
+                            var albumArt = db.get('albumArt').find({ album: item.album }).value();
+                            if (albumArt) {
+                                item.albumArtUrl = albumArt.url;
+                            }    
+                        } catch (_error) {
+                            console.error("cannot check albumArt for '" + item.album + "'");
                         }
                     }
-                } catch (error) {
-                    console.error("cannot check albumArt for '" + item.album + "'");
-                }
+            
             }
 
             return results;

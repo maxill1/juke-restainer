@@ -6,7 +6,7 @@ handler.on('done', (message, indexDone, chunks) => {
     console.log(indexDone + "/" + chunks + " - " + message);
 
     if (indexDone === chunks) {
-        var item = main.searchAll("Remember");
+        var item = library.searchAll("Remember");
         console.log(item);
     }
 });

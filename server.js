@@ -3,7 +3,8 @@ var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
 var MusicLibrary = require('./handlers/library')
-var YoutubeDownloader = require('./handlers/youtube')
+var YoutubeDownloader = require('./handlers/youtube-handler')
+var downloaderStatus = require('./handlers/downloaderStatus')
 var path = require('path')
 
 process.on('uncaughtException', function (exception) {
@@ -23,7 +24,7 @@ function clientErrorHandler(err, req, res, next) {
     next(err)
   }
 }
-function errorHandler(err, req, res, next) {
+function errorHandler(err, _req, res, _next) {
   res.status(500)
   res.render('error', { error: err })
 }
@@ -181,12 +182,12 @@ controllers.downloadYT = function (req, res) {
 
     try {
 
-      const downloader = new YoutubeDownloader();
       for (let index = 0; index < body.list.length; index++) {
         const url = body.list[index];
-        downloader.start(url, function (filePath) {
+        YoutubeDownloader.start(url, function (fileInfo) {
           //library add
-          library.parseAndAdd(filePath).then(function (data) {
+          const filePath = fileInfo.downloadDir
+          library.parseAndAdd(filePath).then(function (_data) {
             console.log("Added to library: " + filePath);
           }, function (err) {
             console.log("Error adding to library " + filePath + " : " + err.message);
@@ -203,6 +204,17 @@ controllers.downloadYT = function (req, res) {
   }
 };
 
+controllers.downloadStatus = function (req, res) {
+  const { queue, downloading, done, errors } = downloaderStatus
+  const data = { queue, downloading, done, errors }
+  console.log(`Download status ${JSON.stringify(data)} `);
+  try { 
+    res.json(data);
+  } catch (e) {
+    res.send(e);
+  }
+};
+
 app.route('/search/:keyword').get(controllers.find);
 app.route('/file/:fileName').get(controllers.find_filename);
 app.route('/artist/:artist').get(controllers.find_artist);
@@ -215,6 +227,7 @@ app.route('/library').get(controllers.all_library);
 app.route('/library/update').get(controllers.update_library);
 app.route('/library/rebuild').get(controllers.rebuild_library);
 app.route('/download/yt').post(controllers.downloadYT);
+app.route('/download/status').get(controllers.downloadStatus);
 
 function start(app) {
   app.listen(config.port, '0.0.0.0');
@@ -234,9 +247,8 @@ var size = current.size();
 if (size === 0) {
   console.log("Updating library...");
 
-  current.on('done', (index) => {
+  current.on('done', () => {
     console.log("Library updated.");
-    console.log(res);
     start(app);
   });
 
@@ -263,7 +275,7 @@ function addWatcher(watchDir) {
   function check(file, eventName) {
     //extension check
     if (!config.ext.includes(path.extname(file).substring(1))) {
-      console.log("skipping " + file);
+      console.log(`(${eventName}) skipping ${file}`);
       return;
     }
     console.log(`File ${file} has been ${eventName}`);

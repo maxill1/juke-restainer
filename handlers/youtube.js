@@ -3,6 +3,7 @@ const Fs = require('fs');
 const ytpl = require('@distube/ytpl');
 const NodeID3 = require('node-id3')
 var config = require('../config-loader.js')
+var downloaderStatus = require('./downloaderStatus.js')
 
 module.exports = function () {
 
@@ -74,6 +75,8 @@ module.exports = function () {
             var title = cleanupTitle(info.videoDetails.title);
             var output = path_ + title + "." + ext;
 
+            downloaderStatus.addToQueue(url_, path_, downloadVideo, playlistTitle)
+
             console.log("Downloading " + url_ + " on " + output);
 
             const video = ytdl.downloadFromInfo(info, options)
@@ -81,10 +84,13 @@ module.exports = function () {
             video.pipe(Fs.createWriteStream(output));
             video.once('response', () => {
                 starttime = Date.now();
+                downloaderStatus.addToDownloading(url_)
             });
             video.on('error', (err)=>{
                 console.log('\n');
                 console.log(`${prefix} Error: ${JSON.stringify(err)}`);
+
+                downloaderStatus.addToErrors(url_, err)
 
                 if (video && video.destroy) {
                     video.destroy();
@@ -95,14 +101,14 @@ module.exports = function () {
                 download(next, urlList, path_, onEnd, downloadVideo, playlistTitle);
             });
             video.on('progress', (chunkLength, downloaded, total) => {
-                const floatDownloaded = downloaded / total;
-                const downloadedMinutes = (Date.now() - starttime) / 1000 / 60;
-
+                //const floatDownloaded = downloaded / total;
+                //const downloadedMinutes = (Date.now() - starttime) / 1000 / 60;
                 var diagn = prefix + ' ' + `(${(downloaded / 1024 / 1024).toFixed(2)}MB of ${(total / 1024 / 1024).toFixed(2)}MB)\n`;
-
-                console.log(diagn);
+                downloaderStatus.progress(url_, 'downloading', diagn)
             });
             video.on('end', () => {
+                downloaderStatus.addToConverting(url_)
+
                 console.log('\n\n');
                 console.log(prefix + " Done");
 
@@ -116,12 +122,14 @@ module.exports = function () {
                         var artist = title;
                         var song = title;
                         var test = /^(.*)[:-](.*)/gm.exec(title);
-                        if (test.length === 3) {
+                        if (test?.length === 3) {
                             artist = test[1].trim();
                             song = test[2].trim();
                         }
                         //id3 tag
                         writeId3Tag(filePath, song, artist, playlistTitle, index);
+
+                        downloaderStatus.addToDone(url_)
 
                         if (onEnd) {
                             onEnd(filePath);
@@ -138,8 +146,10 @@ module.exports = function () {
             });
         }, function (err) {
             console.error(err.message);
+            downloaderStatus.addToErrors(url_)
         }).catch(err => {
             console.error(err);
+            downloaderStatus.addToErrors(url_)
             throw err;
         });;
 
