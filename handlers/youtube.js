@@ -1,6 +1,6 @@
-const ytdl = require('ytdl-core');
+const ytdl = require('@distube/ytdl-core');
 const Fs = require('fs');
-const ytpl = require('ytpl');
+const ytpl = require('@distube/ytpl');
 const NodeID3 = require('node-id3')
 var config = require('../config-loader.js')
 
@@ -81,6 +81,18 @@ module.exports = function () {
             video.pipe(Fs.createWriteStream(output));
             video.once('response', () => {
                 starttime = Date.now();
+            });
+            video.on('error', (err)=>{
+                console.log('\n');
+                console.log(`${prefix} Error: ${JSON.stringify(err)}`);
+
+                if (video && video.destroy) {
+                    video.destroy();
+                }
+
+                //next
+                var next = index + 1;
+                download(next, urlList, path_, onEnd, downloadVideo, playlistTitle);
             });
             video.on('progress', (chunkLength, downloaded, total) => {
                 const floatDownloaded = downloaded / total;

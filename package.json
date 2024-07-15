@@ -11,15 +11,15 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@derhuerst/http-basic": "^8.2.1",
+    "@distube/ytdl-core": "^4.13.5",
+    "@distube/ytpl": "^1.2.1",
     "chokidar": "^3.5.1",
     "express": "^4.17.1",
     "ffmpeg-static": "^4.3.0",
     "find": "^0.2.9",
     "lowdb": "^1.0.0",
     "music-metadata": "^5.4.3",
-    "node-id3": "^0.1.21",
-    "ytdl-core": "^4.9.1",
-    "ytpl": "^2.2.3"
+    "node-id3": "^0.1.21"
   },
   "devDependencies": {
     "kind-of": ">=6.0.3",
