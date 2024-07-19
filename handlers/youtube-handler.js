@@ -332,25 +332,30 @@ const YoutubeHandler = {
   process:(list, index, onDone)=>{
 
     const current = list[index]
-    const trackNumber = index +1
-    YoutubeHandler.download(
-      current.url, 
-      current.downloadDir, 
-      current.downloadVideo, 
-      current.playlistTitle, 
-      trackNumber
-      ).then((fileInfo)=>{
-
+    if(current){
+      console.log(`Queue processing ${index+1}/${list?.length} (${current.url}${(' ' +(current.playlistTitle??'')).trim()})`)
+      const trackNumber = index +1
+      YoutubeHandler.download(
+        current.url, 
+        current.downloadDir, 
+        current.downloadVideo, 
+        current.playlistTitle, 
+        trackNumber
+        ).then((fileInfo)=>{
+  
+            YoutubeHandler.process(list, index +1, onDone)
+  
+            if(onDone){
+              onDone(fileInfo)
+            }
+        }).catch((err)=>{
+          console.error(err)
+  
           YoutubeHandler.process(list, index +1, onDone)
-
-          if(onDone){
-            onDone(fileInfo)
-          }
-      }).catch((err)=>{
-        console.error(err)
-
-        YoutubeHandler.process(list, index +1, onDone)
-      })
+        })
+    }else{
+      console.log(`Queue done ${index}/${list?.length}`)
+    }
   }
 
 }
