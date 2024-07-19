@@ -22,7 +22,10 @@ const downloaderStatus = {
   done: [],
   errors: [],
   setQueue: (queue)=>{
-    downloaderStatus.queue = queue
+    downloaderStatus.queue = [
+      ...(downloaderStatus.queue ?? []),
+      ...(queue ?? [])
+    ]
   },
   addToDownloading: (url)=>{
     stepElement(url, 'queue', 'downloading')

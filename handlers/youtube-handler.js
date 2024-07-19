@@ -109,7 +109,8 @@ const YoutubeHandler = {
               url: item.id,
               downloadDir: playlistPath,
               downloadVideo,
-              playlistTitle
+              playlistTitle,
+              origin: url
             })
           }
           resolve(list)
@@ -129,7 +130,8 @@ const YoutubeHandler = {
             url: item,
             downloadDir,
             downloadVideo,
-            playlistTitle: ''
+            playlistTitle: '',
+            origin: item
           })
         });
         resolve(list)
@@ -183,7 +185,7 @@ const YoutubeHandler = {
    * @param {*} downloadVideo 
    * @param {*} playlistTitle 
    */
-  download: (url, fileRoot, downloadVideo, playlistTitle, trackNumber) => {
+  download: (url, fileRoot, downloadVideo, playlistTitle, trackNumber, source) => {
 
     return new Promise((resolve, reject) => {
 
@@ -218,6 +220,7 @@ const YoutubeHandler = {
             downloadDir: output,
             downloadVideo,
             playlistTitle,
+            source,
             tags: {
               title: title,
               album: playlistTitle || "Youtube",
@@ -324,16 +327,16 @@ const YoutubeHandler = {
     YoutubeHandler.getFileList(url).then((list)=>{
       console.log(list)
       downloaderStatus.setQueue(list)
-      YoutubeHandler.process(list, 0, onDone)
+      YoutubeHandler.process(list, 0, onDone, url)
     }).catch((err)=>{
       console.error(err)
     })
   },
-  process:(list, index, onDone)=>{
+  process:(list, index, onDone, origin)=>{
 
     const current = list[index]
     if(current){
-      console.log(`Queue processing ${index+1}/${list?.length} (${current.url}${(' ' +(current.playlistTitle??'')).trim()})`)
+      console.log(`Queue processing ${index+1}/${list?.length} (${current.url}${(' ' +(current.playlistTitle??queueName)).trim()})`)
       const trackNumber = index +1
       YoutubeHandler.download(
         current.url, 
@@ -343,7 +346,7 @@ const YoutubeHandler = {
         trackNumber
         ).then((fileInfo)=>{
   
-            YoutubeHandler.process(list, index +1, onDone)
+            YoutubeHandler.process(list, index +1, onDone, origin)
   
             if(onDone){
               onDone(fileInfo)
@@ -351,10 +354,10 @@ const YoutubeHandler = {
         }).catch((err)=>{
           console.error(err)
   
-          YoutubeHandler.process(list, index +1, onDone)
+          YoutubeHandler.process(list, index +1, onDone, origin)
         })
     }else{
-      console.log(`Queue done ${index}/${list?.length}`)
+      console.log(`Queue done ${index}/${list?.length} (${origin})`)
     }
   }
 
