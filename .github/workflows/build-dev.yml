@@ -5,6 +5,7 @@ env:
   BUILD_TAG: 'dev'
     
 on:
+  workflow_dispatch:
   push:
     branches: 'dev'
     tags: 'dev'
