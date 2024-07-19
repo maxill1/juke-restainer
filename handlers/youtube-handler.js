@@ -9,6 +9,14 @@ const { Readable } = require('stream');
 const { finished } = require('stream/promises');
 const sharp = require('sharp');
 
+const BLACKLIST = [
+  'tv',
+  'amv',
+  'and',
+  'anime',
+  'op'
+]
+
 const cleanupTitle = function (title) {
   if (!title) {
     return "";
@@ -17,14 +25,91 @@ const cleanupTitle = function (title) {
   title = title.replace('\\', '-');
   title = title.replace('&', 'and');
   title = title.replace(' HQ', '');
+  title = title.replace('「AMV」', '');
+  title = title.replace('[AMV]', '');
+  title = title.replace('!!', ' ');
   title = title.replace(/"/g, '');
-
+  title = title.replace('Official Music Video', '');
+  title = title.replace('()', '');
+  
   if(title.length > 60){
     const found = String(title).match(/(.+) - ([A-Za-z ]+)/)
     title = found?.[0] ?? title
   }
 
   return title?.trim();
+}
+
+function extractTags(videoDetails, playlistTitle, trackNumber){
+  
+
+  function wordFreq(string, stringWithWeigth) {
+    var words = string.replace(/[.]/g, '').split(/\s/);
+    var freqMap = {};
+    words.forEach(function(str) {
+        const w = str.toLowerCase().replace(/[^a-zA-Z0-9]/g, '')
+        if (!freqMap[w]) {
+            freqMap[w] = 0;
+        }
+        freqMap[w] += 1;
+        //if its in the playlist title it matters more
+        if(w.trim().length > 2 && stringWithWeigth?.toLowerCase().indexOf(w) > -1){
+          freqMap[w] += 1;
+        }
+    });
+
+    return freqMap;
+}
+
+  const title = cleanupTitle(videoDetails.title)
+  let song = null
+  let artist = null
+
+  const owner = videoDetails?.ownerChannelName?.toLowerCase?.()?.trim?.();
+  const author = videoDetails?.author?.name?.toLowerCase?.()?.trim?.();
+  const wordMap = `${title} ${owner} ${(videoDetails?.keywords ?? []).join(' ')} ${author !== owner ? author: ''} ${playlistTitle}`
+ 
+  const occurrencies = wordFreq(wordMap, playlistTitle)
+
+  const match = Object.keys(occurrencies).reduce((best, key)=>{
+    if(key?.trim().length < 2 || BLACKLIST.includes(key?.trim())){
+      return best
+    }
+    const currentCount = occurrencies[key]
+    const bestCount = occurrencies[best] ?? 0
+    if(currentCount > bestCount ){
+      return key
+    }
+    return best
+  }, null)
+  if(match){
+    artist = match
+    if(artist){
+      artist = artist.substring(0,1).toUpperCase() + artist.substring(1)
+    }
+    song = title.replace(`${artist} - `, '').replace(artist, '')
+  }else{
+    artist = title;
+    song = title;
+    var test = /^(.*)[:-](.*)/gm.exec(title);
+    if (test?.length === 3) {
+      artist = test[1].trim();
+      song = test[2].trim();
+    }
+  }
+
+  if(!artist){
+    artist = playlistTitle ?? "Youtube"
+  }
+
+  return {
+    artist,
+    performerInfo: artist,
+    title: song,
+    album: playlistTitle || "Youtube",
+    TRCK: trackNumber || 1,
+    fileUrl: videoDetails.video_url,
+  }
 }
 
 /**
@@ -222,12 +307,7 @@ const YoutubeHandler = {
             playlistTitle,
             source,
             tags: {
-              title: title,
-              album: playlistTitle || "Youtube",
-              TRCK: trackNumber || 1,
-              artist: playlistTitle ?? "Youtube",
-              performerInfo:  playlistTitle ?? "Youtube",
-              fileUrl: info.videoDetails.video_url,
+              ...extractTags(info.videoDetails, playlistTitle, trackNumber),
               image: imageTag
             }
           }
@@ -270,15 +350,6 @@ const YoutubeHandler = {
             const mp3Converter = new (require('./mp3-converter'))();
             mp3Converter.convert(output, function (filePath) {
               try {
-                var artist = title;
-                var song = title;
-                var test = /^(.*)[:-](.*)/gm.exec(title);
-                if (test?.length === 3) {
-                  artist = test[1].trim();
-                  song = test[2].trim();
-                }
-                fileInfo.tags.title = song
-                fileInfo.tags.artist = artist
                 //id3 tag
                 writeId3Tag(filePath, fileInfo.tags);
   
