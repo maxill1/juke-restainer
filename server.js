@@ -206,10 +206,15 @@ controllers.downloadYT = function (req, res) {
 
 controllers.downloadStatus = function (req, res) {
   const { queue, downloading, done, errors } = downloaderStatus
-  const data = { queue, downloading, done, errors }
-  console.log(`Download status ${JSON.stringify(data)} `);
+  const lists = { queue, downloading, done, errors }
   try { 
-    res.json(data);
+    const payload = { }
+    Object.keys(lists).forEach(key => {
+      payload[key] = lists[key]?.length ?? 0
+    });
+    payload.lists = lists
+    console.log(`Download status ${JSON.stringify(payload)} `);
+    res.json(payload);
   } catch (e) {
     res.send(e);
   }
