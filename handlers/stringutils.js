@@ -48,4 +48,4 @@ const stringutils = {
     return title?.trim();
   }
 }
-module.export = stringutils
+module.exports = stringutils
