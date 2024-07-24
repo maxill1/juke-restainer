@@ -4,6 +4,7 @@ const Fs = require('fs');
 const ytpl = require('@distube/ytpl');
 const NodeID3 = require('node-id3')
 const downloaderStatus = require('./downloaderStatus.js');
+const stringutils = require('./stringutils.js');
 const path = require('path');
 const { Readable } = require('stream');
 const { finished } = require('stream/promises');
@@ -16,29 +17,6 @@ const BLACKLIST = [
   'anime',
   'op'
 ]
-
-const cleanupTitle = function (title) {
-  if (!title) {
-    return "";
-  }
-  title = title.replace('/', '-');
-  title = title.replace('\\', '-');
-  title = title.replace('&', 'and');
-  title = title.replace(' HQ', '');
-  title = title.replace('「AMV」', '');
-  title = title.replace('[AMV]', '');
-  title = title.replace('!!', ' ');
-  title = title.replace(/"/g, '');
-  title = title.replace('Official Music Video', '');
-  title = title.replace('()', '');
-  
-  if(title.length > 60){
-    const found = String(title).match(/(.+) - ([A-Za-z ]+)/)
-    title = found?.[0] ?? title
-  }
-
-  return title?.trim();
-}
 
 function extractTags(videoDetails, playlistTitle, trackNumber){
   
@@ -61,7 +39,7 @@ function extractTags(videoDetails, playlistTitle, trackNumber){
     return freqMap;
 }
 
-  const title = cleanupTitle(videoDetails.title)
+  const title = stringutils.cleanupTitle(videoDetails.title)
   let song = null
   let artist = null
 
@@ -109,6 +87,7 @@ function extractTags(videoDetails, playlistTitle, trackNumber){
     album: playlistTitle || "Youtube",
     TRCK: trackNumber || 1,
     fileUrl: videoDetails.video_url,
+    originalTitle: videoDetails.title
   }
 }
 
@@ -181,7 +160,7 @@ const YoutubeHandler = {
           const list = []
           console.log("Downloading playlist " + playlist.title + " " + playlist.items.length + " videos");
           //playlist folder
-          var title = cleanupTitle(playlist.title);
+          var title = stringutils.cleanupTitle(playlist.title);
           var playlistPath = downloadDir + title + "/";
           if (!Fs.existsSync(playlistPath)) {
             Fs.mkdirSync(playlistPath);
@@ -291,8 +270,9 @@ const YoutubeHandler = {
       //get info
       ytdl.getInfo(url).then(function (info) {
         //video title as file name
-        var title = cleanupTitle(info.videoDetails.title);
-        var output = `${fileRoot}${title}.${ext}`;
+        var title = stringutils.cleanupTitle(info.videoDetails.title);
+        const tags = extractTags(info.videoDetails, playlistTitle, trackNumber)
+        var output = `${fileRoot}${tags.artist} - ${tags.title}.${ext}`;
 
         console.log(`Received info for ${url}`);
 
@@ -307,7 +287,7 @@ const YoutubeHandler = {
             playlistTitle,
             source,
             tags: {
-              ...extractTags(info.videoDetails, playlistTitle, trackNumber),
+              ...tags,
               image: imageTag
             }
           }
